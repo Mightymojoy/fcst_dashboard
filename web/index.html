@@ -1042,11 +1042,25 @@ function renderSku(f) {
       <td class="num">${sk.price > 0 ? '¥' + fmtNum(sk.price) : '-'}</td>
       <td class="num gold">${fmtNum(sk.totalPred)}</td>
       <td class="num">${fmtNum(sk.totalActual)}</td>`;
+    // 分月占比子行
+    const nowMonth = new Date().getMonth() + 1; // 当前月份=7
+    const currentYear = new Date().getFullYear();
+    let pctHtml = ''; // 占比单元格
     keys.forEach(k => {
       const pv = sk.pred_by_month?.[k] || 0;
+      const av = sk.actual_by_month?.[k] || 0;
+      const m = parseInt(k.split('-')[1]);
+      const isPast = (currentYear === 2026 && m < nowMonth) || currentYear < 2026;
+      const divisor = isPast ? sk.totalActual : sk.totalPred;
+      const num = isPast ? av : pv;
+      const pct = divisor > 0 ? (num / divisor * 100) : 0;
       html += `<td class="num">${pv > 0 ? fmtNum(pv) : '-'}</td>`;
+      pctHtml += `<td style="font-size:9px;color:${pct>0?'#c9a962':'#d4d4d4'};text-align:center">${pct > 0 ? pct.toFixed(1)+'%' : '-'}</td>`;
     });
-    html += `</tr>`;
+    html += `</tr><tr style="background:#fafafa;border-bottom:1px solid #e8e8e8">
+      <td colspan="9" style="font-size:9px;color:#9ca3af;padding:2px 6px;text-align:right">各月占比 →</td>
+      ${pctHtml}
+    </tr>`;
   });
   html += `</tbody></table>`;
   $('skuTableWrap').innerHTML = html;
