@@ -1193,6 +1193,7 @@ function renderRatio(f) {
   let skus = DATA.sku_details || [];
   if (series) skus = skus.filter(sk => sk.series === series);
   if (f.color) skus = skus.filter(sk => sk.color === f.color);
+  if (f.category) skus = skus.filter(sk => sk.category === f.category);
   
   // 按筛选月份汇总各维度
   const predColor = {}, predSize = {}, predCross = {};
