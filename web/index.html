@@ -1,0 +1,1520 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ITO FCST 渠道预测看板</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif}
+html,body{height:100%;background:#f3f4f6;color:#1f2937;font-size:14px}
+:root{--gold:#c9a962;--gold-light:#e8d5a3;--gold-dark:#a68b4b;--success:#059669;--error:#dc2626}
+/* 导航 */
+.nav{background:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;padding:0 20px;position:sticky;top:0;z-index:100;overflow-x:auto}
+.nav .brand{font-weight:700;font-size:16px;color:#111827;padding:14px 12px 14px 0;margin-right:8px;white-space:nowrap;border-right:1px solid #e5e7eb}
+.nav .brand span{color:var(--gold)}
+.nav .update{font-size:11px;color:#9ca3af;margin-left:auto;padding:0 8px}
+.nav-tabs{display:flex;gap:0}
+.nav-tabs a{display:flex;align-items:center;gap:6px;padding:14px 16px;text-decoration:none;color:#6b7280;font-size:13px;white-space:nowrap;border-bottom:3px solid transparent;transition:all .2s;cursor:pointer}
+.nav-tabs a:hover{color:#374151;background:#f9fafb}
+.nav-tabs a.active{color:var(--gold);border-bottom-color:var(--gold);background:#faf6eb}
+.main-content{overflow-y:auto}
+.container{max-width:1400px;margin:0 auto;padding:16px}
+.filters{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;background:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.filters label{font-size:12px;color:#6b7280;font-weight:500}
+.filters input[type=date]{border:1px solid #d1d5db;border-radius:6px;padding:5px 10px;font-size:13px;outline:none}
+.filters input[type=date]:focus{border-color:var(--gold)}
+.filters{position:relative;z-index:100;overflow:visible}.filters select,.filters .search-input{border:1px solid #d1d5db;border-radius:6px;padding:5px 10px;font-size:13px;background:#fff;outline:none}
+.filters select:focus,.filters .search-input:focus{border-color:var(--gold)}
+.filters .search-input{width:180px}
+
+.kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px}
+.kpi-card{background:#fff;border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.kpi-card .label{font-size:11px;color:#6b7280;margin-bottom:4px}
+.kpi-card .value{font-size:22px;font-weight:700;color:#111827}
+.kpi-card .sub{font-size:11px;margin-top:4px}
+.kpi-card .up{color:var(--success)}
+.kpi-card .down{color:var(--error)}
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.chart-box{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.chart-box .chart-container{width:100%;height:320px}
+.chart-box .chart-container.tall{height:380px}
+.chart-box.full{grid-column:1/-1}
+.chart-box h3{font-size:13px;color:#374151;margin-bottom:10px;font-weight:600}
+.collapse-wrap{background:#fff;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08);margin-bottom:14px;overflow:hidden}
+.collapse-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;cursor:pointer;user-select:none;background:#f9fafb}
+.collapse-header:hover{background:#f3f4f6}
+.collapse-header h3{font-size:13px;color:#374151;font-weight:600;display:flex;align-items:center;gap:8px}
+.collapse-header .arrow{font-size:14px;color:#9ca3af;transition:transform .2s;display:inline-block}
+.collapse-header .arrow.open{transform:rotate(180deg)}
+.collapse-body{overflow:hidden;max-height:0;transition:max-height .35s ease}
+.collapse-body.open{max-height:10000px}
+.collapse-body .table-wrap{overflow-x:auto;border-top:1px solid #e5e7eb}
+table tr.alt td{background:#f9fafb}
+table td.num{text-align:right;font-variant-numeric:tabular-nums}
+table td.num.down{color:#ef4444}
+table td.num.up{color:#22c55e}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:#fff;padding:10px 12px;text-align:right;font-weight:600;color:#374151;border-bottom:2px solid #e5e7eb;position:sticky;top:0}
+th:first-child{text-align:left}
+td{padding:9px 12px;text-align:right;border-bottom:1px solid #f3f4f6}
+td:first-child{text-align:left;font-weight:500}
+.compact-table{width:100%;font-size:11px;border-collapse:collapse;margin-top:4px}
+.compact-table th{background:var(--gray-50);color:var(--gray-600);font-weight:600;padding:4px 6px;border:1px solid var(--gray-200);text-align:center}
+.compact-table td{padding:3px 6px;border:1px solid var(--gray-200);text-align:center}
+.compact-table .num{font-family:Menlo,Consolas,monospace;text-align:right}
+.compact-table .gold{font-weight:600;color:var(--gold-dark);text-align:left}
+.compact-table .up{color:var(--success)}
+.compact-table .down{color:var(--error)}
+tr:hover td{background:#f9fafb}
+tr.section td{font-weight:600;background:#f3f4f6;color:#374151}
+tr.summary td{font-weight:700;background:#faf6eb;border-top:2px solid var(--gold)}
+.compare-tag{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+.compare-tag.up{background:#dcfce7;color:#059669}
+.compare-tag.down{background:#fce4ec;color:#dc2626}
+.compare-tag.flat{background:#f3f4f6;color:#6b7280}
+.compare-tog{display:flex;gap:0;align-items:center}
+.compare-tog button{padding:4px 12px;border:1px solid #d1d5db;background:#fff;font-size:11px;cursor:pointer;color:#6b7280}
+.compare-tog button:first-child{border-radius:4px 0 0 4px}
+.compare-tog button:last-child{border-radius:0 4px 4px 0}
+.compare-tog button.active{background:var(--gold);color:#fff;border-color:var(--gold)}
+.toggle-wrap{display:flex;align-items:center;gap:8px;font-size:12px;color:#6b7280}
+.toggle-switch{position:relative;width:36px;height:20px;background:#d1d5db;border-radius:10px;cursor:pointer;transition:background .2s}
+.toggle-switch.on{background:var(--gold)}
+.toggle-switch::after{content:'';position:absolute;top:2px;left:2px;width:16px;height:16px;background:#fff;border-radius:50%;transition:transform .2s}
+.toggle-switch.on::after{transform:translateX(16px)}
+.hidden{display:none!important}
+/* 新旧class名兼容映射 */
+.header,.tabs{padding:0}.tab-panel{display:none}.tab-panel.active{display:block}.nav .brand{font-weight:700;font-size:16px;color:#111827;padding:14px 12px 14px 0;margin-right:8px;white-space:nowrap;border-right:1px solid #e5e7eb}
+.nav .brand span{color:var(--gold)}
+.filter-bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;background:#fff;padding:12px 16px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.filter-bar label{font-size:12px;color:#6b7280;font-weight:500}
+.filter-bar input,.filter-bar select,.search-input{border:1px solid #d1d5db;border-radius:6px;padding:5px 10px;font-size:13px;outline:none;background:#fff}
+.filter-bar input:focus,.filter-bar select:focus{border-color:var(--gold)}
+.content{padding:0}.tab-panel{display:none}.tab-panel.active{display:block}.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}.chart-card{background:#fff;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.08)}.chart-card .chart-title{font-size:13px;color:#374151;margin-bottom:10px;font-weight:600}.chart-card .chart-box{width:100%;height:320px}.chart-full{grid-column:1/-1}
+.series-top-row{display:none}.series-top-row.open{display:table-row}
+</style>
+</head>
+<body>
+
+<!-- 顶部导航 -->
+<nav class="nav">
+  <div class="brand">ITO<span>.</span> FCST 渠道预测看板</div>
+  <span class="update" id="updateTime">—</span>
+  <span class="update" id="skuCount" style="display:none;margin-left:12px"></span>
+</nav>
+
+<!-- Tab导航 -->
+<div class="tab-bar" style="background:#fff;border-bottom:1px solid #e5e7eb;display:flex;padding:0 20px">
+  <div class="nav-tabs" id="tabNav">
+    <a class="active" onclick="switchTab('overview')">概览</a>
+    <a onclick="switchTab('series')">系列分析</a>
+    <a onclick="switchTab('sku')">SKU明细</a>
+    <a onclick="switchTab('ratio')">占比分析</a>
+    <a onclick="switchTab('verify')">验真</a>
+  </div>
+</div>
+
+<!-- 筛选栏（跨Tab共用） -->
+<div class="filter-bar" id="globalFilter">
+  <label>日期范围</label>
+  <input type="date" class="date-input" id="startDate">
+  <span style="color:var(--gray-300)">—</span>
+  <input type="date" class="date-input" id="endDate">
+  <label>系列</label>
+  <select class="series-select" id="filterSeries"><option value="">全部系列</option></select>
+  <label>颜色</label>
+  <select class="color-select" id="filterColor"><option value="">全部颜色</option></select>
+  <label>品类</label>
+  <select class="series-select" id="filterCategory"><option value="">全部</option><option>行李箱</option><option>包袋</option></select>
+  <div class="toggle-group" id="skuToggle">
+    <span class="toggle-label">SKU明细</span>
+    <div class="toggle-switch on" id="skuSwitch"></div>
+  </div>
+</div>
+
+<!-- 主内容 -->
+<div class="container main-content" id="mainContent">
+
+  <!-- ===== Tab: 概览 ===== -->
+  <div class="tab-panel active" id="panel-overview">
+    <div class="kpi-grid" id="overviewKpi"></div>
+    <div class="chart-row">
+      <div class="chart-box full"><h3>销量趋势 — 预测 vs 实际</h3><div class="chart-container" id="chartTrend"></div></div>
+    </div>
+    <div class="chart-row">
+      <div class="chart-box"><h3>月度达成率（万元）</h3><div class="chart-container" id="chartAchievement"></div></div>
+      <div class="chart-box"><h3>同环比对比 2026 vs 2025 <span class="compare-tog" style="float:right" id="yoyMomToggles">
+        <button data-yoymode="yoy">同比</button><button data-yoymode="mom">环比</button><button data-yoymode="both" class="active">全部</button>
+      </span></h3><div class="chart-container" id="chartYoY"></div></div>
+    </div>
+  </div>
+
+  <!-- ===== Tab: 系列分析 ===== -->
+  <div class="tab-panel" id="panel-series">
+    <div class="kpi-grid" id="seriesKpi"></div>
+    <div class="chart-grid">
+      <div class="chart-card chart-full">
+        <div class="chart-title">系列销量分布</div>
+        <div class="chart-box large" id="chartSeriesBar"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">系列达成率排行</div>
+        <div class="chart-box medium" id="chartSeriesAch"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">
+          <span>系列同环比</span>
+          <span class="yoy-mom-toggles" id="seriesYoyToggles">
+            <button class="yoy-toggle" data-syoymode="yoy">同比</button>
+            <button class="yoy-toggle" data-syoymode="mom">环比</button>
+            <button class="yoy-toggle active" data-syoymode="all" style="color:var(--gold);border-bottom:2px solid var(--gold);">全部</button>
+          </span>
+        </div>
+        <div class="chart-box medium" id="chartSeriesCompare"></div>
+      </div>
+    </div>
+    <div class="table-wrap" id="seriesTableWrap"></div>
+  </div>
+
+  <!-- ===== Tab: SKU明细 ===== -->
+  <div class="tab-panel" id="panel-sku">
+    <div class="filter-section">
+      <span class="label">快速筛选</span>
+      <input type="text" class="search-input" id="skuSearch" placeholder="搜索SKU或名称...">
+      <select class="series-select" id="skuSeriesFilter"><option value="">全部系列</option></select>
+      <select class="color-select" id="skuColorFilter"><option value="">全部颜色</option></select>
+      <button onclick="if(document.querySelector('#panel-sku.active'))renderSku(getActiveFilters())" style="border:1px solid #c9a962;color:#c9a962;background:#fff;padding:4px 12px;border-radius:5px;cursor:pointer;font-size:12px">手动刷新</button>
+    </div>
+    <div class="kpi-grid" id="skuKpi"></div>
+    <div class="table-wrap" id="skuTableWrap"></div>
+  </div>
+
+  <!-- ===== Tab: 占比分析 ===== -->
+  <div class="tab-panel" id="panel-ratio">
+    <div class="filter-section">
+      <span class="label">分析维度</span>
+      <select class="series-select" id="ratioSeriesFilter"><option value="">全部系列</option></select>
+      <select style="border:1px solid var(--gray-200);border-radius:6px;padding:6px 12px;font-size:13px;font-family:var(--font);outline:none;" id="ratioMode">
+        <option value="color">颜色占比</option>
+        <option value="size">尺寸占比</option>
+        <option value="cross">颜色×尺寸交叉</option>
+      </select>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">预测占比</div>
+        <div class="chart-box large" id="ratioPredChart"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">实际占比</div>
+        <div class="chart-box large" id="ratioActualChart"></div>
+      </div>
+    </div>
+    <div class="collapse-wrap">
+      <div class="collapse-header" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.arrow').classList.toggle('open')">
+        <h3>SKU明细 <span class="arrow">▼</span></h3>
+        <span style="font-size:11px;color:#9ca3af">全局SKU开关切换显示/隐藏</span>
+      </div>
+      <div class="collapse-body open" style="max-height:10000px">
+        <div class="table-wrap" id="ratioTableWrap"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Tab: 验真 ===== -->
+  <div class="tab-panel" id="panel-verify">
+    <div class="filters" style="margin-bottom:14px">
+      <label>月份</label>
+      <select id="verifyMonth" style="border:1px solid #d1d5db;border-radius:6px;padding:5px 10px;font-size:13px;outline:none">
+        <option value="">全部月份</option>
+      </select>
+      <span style="font-size:11px;color:#9ca3af">系列/颜色使用全局筛选栏</span>
+    </div>
+    <div class="metric-row" id="verifyMetrics" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
+  <div class="chart-row">
+    <div class="chart-box full">
+      <h3>逐月达成率（实际/预测）</h3>
+      <div style="height:300px" id="verifyAccuracyChart"></div>
+      <div style="padding:6px 12px 8px;font-size:11px;color:var(--gray-400);border-top:1px solid var(--gray-200)">
+        <b>达成率</b> = 当月实际件数 ÷ 当月预测件数 × 100%&nbsp;&nbsp;|&nbsp;&nbsp;
+        <b>整体准确率(±20%)</b> = (偏差率≤20%的SKU数 ÷ 总SKU数) × 100%&nbsp;&nbsp;|&nbsp;&nbsp;
+        <b>偏差率</b> = |实际件数 - 预测件数| ÷ 预测件数
+      </div>
+    </div>
+  </div>
+  <div class="collapse-wrap" id="verifySeriesWrap">
+    <div class="collapse-header" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.arrow').classList.toggle('open')">
+      <h3><span>🏷</span> 系列偏差概览（按偏差绝对值排序） <span class="arrow">▼</span></h3>
+    </div>
+    <div class="collapse-body open" style="max-height:5000px">
+      <div class="table-wrap" id="verifySeriesTable"></div>
+    </div>
+  </div>
+  <div class="collapse-wrap" id="verifyHighDevWrap">
+      <div class="collapse-header" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.arrow').classList.toggle('open')">
+        <h3><span>⚠</span> 偏差异常SKU (按偏差绝对值排序) <span class="arrow">▼</span></h3>
+      </div>
+      <div class="collapse-body open" style="max-height:5000px">
+        <div class="table-wrap" id="verifyHighDevTable"></div>
+      </div>
+    </div>
+    <div class="collapse-wrap" id="verifyFullWrap">
+      <div class="collapse-header" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('.arrow').classList.toggle('open')">
+        <h3><span>📋</span> 全部验真明细 <span class="arrow">▼</span></h3>
+      </div>
+      <div class="collapse-body">
+        <div class="table-wrap" id="verifyTableWrap"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ============================================================
+// ITO FCST 看板 — 前端逻辑
+// ============================================================
+
+let DATA = null;
+let yoyMomMode = 'both'; // 'yoy' | 'mom' | 'both'
+let seriesYoyMomMode = 'all'; // 系列同环比切换
+
+// ===== 工具函数 =====
+function $(id) { return document.getElementById(id); }
+function fmtNum(n) { return Number(n).toLocaleString('zh-CN'); }
+function fmtWan(v) { return v >= 10000 ? (v/10000).toFixed(1) + '亿' : v.toFixed(1) + '万'; }
+
+// ===== 初始化 =====
+async function init() {
+  try {
+    const resp = await fetch('forecast_data.json');
+    const raw = await resp.text();
+    DATA = JSON.parse(raw);
+  } catch(e) {
+    console.warn('forecast_data.json 无法加载, 尝试读取 dashboard-data.json');
+    const resp = await fetch('dashboard-data.json');
+    DATA = await resp.json();
+  }
+  
+  if (!DATA) {
+    $('mainContent').innerHTML = '<div class="empty-state"><div class="icon">⚠</div><p>数据文件加载失败，请先运行导出脚本</p></div>';
+    return;
+  }
+  
+  $('updateTime').textContent = '更新于 ' + (DATA.meta?.updated || '—');
+  if (DATA.meta?.sku_count) {
+    $('skuCount').textContent = DATA.meta.sku_count;
+    $('skuCount').style.display = 'inline';
+  }
+  
+  // 初始化筛选器
+  initFilters();
+  // 初始化为全部数据
+  applyDateFilter();
+  
+  
+  // 筛选变更（主筛选栏）
+  ['filterSeries','filterColor','filterCategory','startDate','endDate'].forEach(id => {
+    $(id).addEventListener('change', () => { applyDateFilter(); renderActiveTab(); });
+    $(id).addEventListener('input', () => { applyDateFilter(); renderActiveTab(); });
+  });
+  // 筛选变更（子页面独立筛选）
+  ['skuSearch','skuSeriesFilter','skuColorFilter'].forEach(id => {
+    const el = $(id);
+    if (el) el.addEventListener('change', () => { if ($('#panel-sku').classList.contains('active')) renderSku(getActiveFilters()); });
+  });
+  
+  // 同环比切换
+  let yoyToggleContainer = $('yoyMomToggles');
+  if (yoyToggleContainer) {
+    yoyToggleContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-yoymode]');
+      if (!btn) return;
+      yoyMomMode = btn.dataset.yoymode;
+      yoyToggleContainer.querySelectorAll('[data-yoymode]').forEach(b => {
+        b.classList.toggle('active', b.dataset.yoymode === yoyMomMode);
+        if (b.dataset.yoymode === yoyMomMode) { b.style.color = 'var(--gold)'; b.style.borderBottomColor = 'var(--gold)'; }
+        else { b.style.color = ''; b.style.borderBottomColor = 'transparent'; }
+      });
+      if (document.querySelector('#panel-overview.active')) renderOverview(getActiveFilters());
+    });
+  }
+  // 系列同环比切换
+  const seriesYoyContainer = $('seriesYoyToggles');
+  if (seriesYoyContainer) {
+    seriesYoyContainer.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-syoymode]');
+      if (!btn) return;
+      seriesYoyMomMode = btn.dataset.syoymode;
+      seriesYoyContainer.querySelectorAll('[data-syoymode]').forEach(b => {
+        b.classList.toggle('active', b.dataset.syoymode === seriesYoyMomMode);
+        if (b.dataset.syoymode === seriesYoyMomMode) { b.style.color = 'var(--gold)'; b.style.borderBottomColor = 'var(--gold)'; }
+        else { b.style.color = ''; b.style.borderBottomColor = 'transparent'; }
+      });
+      if (document.querySelector('#panel-series.active')) renderSeries(getActiveFilters());
+    });
+  }
+  
+  // SKU开关
+  $('skuSwitch').addEventListener('click', () => {
+    $('skuSwitch').classList.toggle('on');
+    applyDateFilter();
+    renderActiveTab();
+  });
+  
+  // 默认渲染概览
+  renderTab('overview');
+  
+  // 窗口大小变化重绘
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderActiveTab, 300);
+  });
+}
+
+function initFilters() {
+  const seriesSet = new Set();
+  const colorSet = new Set();
+  
+  if (DATA.sku_details) {
+    DATA.sku_details.forEach(sk => {
+      if (sk.series) seriesSet.add(sk.series);
+      if (sk.color) colorSet.add(sk.color);
+    });
+  }
+  if (DATA.series) {
+    DATA.series.forEach(s => { if (s.name) seriesSet.add(s.name); });
+  }
+  
+  const seriesArr = [...seriesSet].sort();
+  const selIds = ['filterSeries','skuSeriesFilter','ratioSeriesFilter','verifySeries'];
+  selIds.forEach(id => {
+    const sel = $(id);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">全部系列</option>';
+    seriesArr.forEach(s => { sel.innerHTML += `<option value="${s}">${s}</option>`; });
+  });
+  
+  const colorArr = [...colorSet].sort();
+  ['filterColor','skuColorFilter','verifyColor'].forEach(id => {
+    const sel = $(id);
+    if (!sel) return;
+    sel.innerHTML = '<option value="">全部颜色</option>';
+    colorArr.forEach(c => { sel.innerHTML += `<option value="${c}">${c}</option>`; });
+  });
+  
+  // 验真月份 — 只显示有预测值的月份（6月及以后）
+  const vMonth = $('verifyMonth');
+  if (vMonth && DATA.calibration?.months) {
+    vMonth.innerHTML = '<option value="">全部月份</option>';
+    DATA.calibration.months.forEach(m => {
+      if (m.pred_qty > 0) {
+        vMonth.innerHTML += `<option value="${m.month_key}">${m.month}</option>`;
+      }
+    });
+  }
+  
+  // 设置默认日期范围（预测数据的第一和最后一个月）
+  if (DATA.summary?.months_key?.length > 0) {
+    const keys = DATA.summary.months_key;
+    $('startDate').value = keys[0] + '-01';
+    $('endDate').value = keys[keys.length - 1] + '-30';
+  } else if (DATA.daily_actual?.length > 0) {
+    const dates = DATA.daily_actual.map(d => d.date).filter(Boolean).sort();
+    if (dates.length > 0) {
+      $('startDate').value = dates[0];
+      $('endDate').value = dates[dates.length - 1];
+    }
+  }
+}
+
+function getActiveFilters() {
+  const series = $('filterSeries')?.value || '';
+  const color = $('filterColor')?.value || '';
+  const category = $('filterCategory')?.value || '';
+  const start = $('startDate')?.value || '';
+  const end = $('endDate')?.value || '';
+  const showSku = $('skuSwitch')?.classList.contains('on') || false;
+  return { series, color, category, start, end, showSku };
+}
+
+function applyDateFilter() {
+  // 日期范围筛选已在前端用filter实现，这里主要更新状态
+}
+
+function renderActiveTab() {
+  const active = document.querySelector('#tabNav a.active');
+  if (active) {
+    const m = active.getAttribute('onclick')?.match(/'(.*?)'/);
+    if (m) renderTab(m[1]);
+  }
+}
+
+function switchTab(tab) {
+  document.querySelectorAll('#tabNav a').forEach(a => a.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const link = document.querySelector(`#tabNav a[onclick*="'${tab}'"]`);
+  const panel = document.getElementById(`panel-${tab}`);
+  if (link) link.classList.add('active');
+  if (panel) panel.classList.add('active');
+  try { renderTab(tab); } catch(e) { console.error('render error:', e); }
+}
+function renderTab(tab) {
+  const f = getActiveFilters();
+  switch(tab) {
+    case 'overview': renderOverview(f); break;
+    case 'series': renderSeries(f); break;
+    case 'sku': renderSku(f); break;
+    case 'ratio': renderRatio(f); break;
+    case 'verify': renderVerify(f); break;
+  }
+}
+
+// ===== 图表帮助 =====
+function resizeChart(id) {
+  const c = echarts.getInstanceByDom($(id));
+  if (c) setTimeout(() => c.resize(), 100);
+}
+
+function disposeChart(id) {
+  const c = echarts.getInstanceByDom($(id));
+  if (c) c.dispose();
+}
+
+function renderChart(id, option) {
+  const dom = $(id);
+  if (!dom) return;
+  let chart = echarts.getInstanceByDom(dom);
+  if (!chart) chart = echarts.init(dom);
+  chart.setOption(option, true);
+  return chart;
+}
+
+// 金色渐变
+function goldGradient() { 
+  return ['#c9a962', '#d4b870', '#e8d5a3', '#b89550', '#dfc98b'];
+}
+
+// ============================================================
+// 日期筛选核心函数
+// ============================================================
+function getFilteredMonthIndices(f) {
+  // 返回在日期范围内的月份索引数组（0-based）
+  // 用字符串比较避免Date解析的时区问题
+  const s = DATA.summary;
+  if (!f.start && !f.end) return s.months_key.map((_, i) => i);
+  const start = f.start ? f.start.substring(0, 7) : ''; // "2026-06"
+  const end = f.end ? f.end.substring(0, 7) : '';       // "2026-08"
+  const indices = [];
+  s.months_key.forEach((mk, i) => {
+    if (start && mk < start) return;
+    if (end && mk > end) return;
+    indices.push(i);
+  });
+  // 如果筛选结果为空且用户设置了日期，不要回退到全部
+  return indices;
+}
+
+function sumFiltered(arr, indices) {
+  if (!arr) return 0;
+  return indices.reduce((a, i) => a + (arr[i] || 0), 0);
+}
+
+function filterArray(arr, indices) {
+  if (!arr) return [];
+  return indices.map(i => arr[i]);
+}
+
+// ============================================================
+// 概览 Tab
+// ============================================================
+function renderOverview(f) {
+  const s = DATA.summary;
+  const fm = getFilteredMonthIndices(f);
+  console.log('[概览] 日期范围:', f.start, '~', f.end, '筛选月份索引:', fm, '对应月份:', fm.map(i => s.months_key[i]));
+  if (fm.length === 0) {
+    $('overviewKpi').innerHTML = '<div class="empty-state"><p>所选日期范围内无预测数据</p></div>';
+    $('chartTrend').innerHTML = ''; $('chartAchievement').innerHTML = ''; $('chartYoY').innerHTML = '';
+    return;
+  }
+  renderOverviewKpi(s, f, fm);
+  renderTrendChart(s, f, fm);
+  renderAchievementChart(s, f, fm);
+  renderYoYChart(f, fm);
+}
+
+function renderOverviewKpi(s, f, fm) {
+  // 如果筛选了系列、颜色或品类，从SKU明细重算
+  let useFiltered = f.series || f.color || f.category;
+  let totalQty, totalAmt, totalTarget;
+  if (useFiltered && DATA.sku_details) {
+    let filtered = DATA.sku_details;
+    if (f.series) filtered = filtered.filter(sk => sk.series === f.series);
+    if (f.color) filtered = filtered.filter(sk => sk.color === f.color);
+    if (f.category) filtered = filtered.filter(sk => sk.category === f.category);
+    totalQty = 0; totalAmt = 0;
+    let allAmt = 0; // 全品类同时段预测金额
+    filtered.forEach(sk => {
+      fm.forEach(i => {
+        const mk = s.months_key[i];
+        totalQty += sk.pred_by_month?.[mk] || 0;
+        totalAmt += sk.amt_by_month?.[mk] || 0;
+      });
+    });
+    // 计算全品类金额用来按比例拆分目标
+    DATA.sku_details.forEach(sk => {
+      fm.forEach(i => {
+        allAmt += sk.amt_by_month?.[s.months_key[i]] || 0;
+      });
+    });
+    totalAmt = totalAmt / 10000;
+    allAmt = allAmt / 10000;
+    totalTarget = sumFiltered(s.pred_target_amt || s.target_amt, fm);
+    // 按预测金额占比拆分目标（品类/系列/颜色级别）
+    if (allAmt > 0) totalTarget = totalTarget * (totalAmt / allAmt);
+  } else {
+    totalQty = sumFiltered(s.pred_qty, fm);
+    totalAmt = sumFiltered(s.pred_amt, fm);
+    totalTarget = sumFiltered(s.pred_target_amt || s.target_amt, fm);
+  }
+  const ach = totalTarget > 0 ? (totalAmt / totalTarget * 100).toFixed(1) : 0;
+  // 环比: 最近1月 vs 前1月
+  const lastIdx = fm[fm.length - 1];
+  const prevIdx = lastIdx > 0 ? lastIdx - 1 : -1;
+  let momHtml = '';
+  if (prevIdx >= 0 && s.pred_qty[prevIdx] > 0) {
+    const momRate = ((s.pred_qty[lastIdx] - s.pred_qty[prevIdx]) / s.pred_qty[prevIdx] * 100).toFixed(1);
+    momHtml = `<span class="${momRate >= 0 ? 'up' : 'down'}">环比 <span class="rate">${momRate >= 0 ? '+' : ''}${momRate}%</span></span>`;
+  }
+  // 同比
+  let yoyHtml = '';
+  if (DATA.historical?.yoy) {
+    const monthNum = parseInt(s.months_key[lastIdx].split('-')[1]);
+    const yoyData = DATA.historical.yoy[String(monthNum)];
+    if (yoyData && yoyData.rate != null) {
+      yoyHtml = `<span class="${yoyData.rate >= 0 ? 'up' : 'down'}">同比 <span class="rate">${yoyData.rate >= 0 ? '+' : ''}${yoyData.rate}%</span></span>`;
+    }
+  }
+  
+  const targetLabel = useFiltered ? '预测目标(拆分)' : '预测目标合计';
+  const achHtml =
+    `<div class="sub">筛选期达成率 <strong>${ach}%</strong></div>`;
+  $('overviewKpi').innerHTML = `
+    <div class="kpi-card gold-badge">
+      <div class="label">${targetLabel}</div>
+      <div class="value">¥${fmtWan(totalTarget)}</div>
+      ${achHtml}
+    </div>
+    <div class="kpi-card">
+      <div class="label">预测合计(件)</div>
+      <div class="value">${fmtNum(totalQty)}</div>
+      <div class="sub">${momHtml}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">预测合计金额</div>
+      <div class="value">¥${fmtWan(totalAmt)}</div>
+      <div class="sub">${fm.length}个月筛选</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">SKU总数</div>
+      <div class="value">${DATA.meta?.sku_count || 0}</div>
+      <div class="sub">${yoyHtml}</div>
+    </div>
+  `;
+}
+
+function renderTrendChart(s, f, fm) {
+  const months = filterArray(s.months, fm);
+  // 如果筛选了系列、颜色或品类，从SKU明细重算
+  let predQty, actualQty;
+  if ((f.series || f.color || f.category) && DATA.sku_details) {
+    let filtered = DATA.sku_details;
+    if (f.series) filtered = filtered.filter(sk => sk.series === f.series);
+    if (f.color) filtered = filtered.filter(sk => sk.color === f.color);
+    if (f.category) filtered = filtered.filter(sk => sk.category === f.category);
+    const keys = filterArray(s.months_key, fm);
+    predQty = keys.map(k => filtered.reduce((a, sk) => a + (sk.pred_by_month?.[k] || 0), 0));
+    actualQty = keys.map(k => filtered.reduce((a, sk) => a + (sk.actual_by_month?.[k] || 0), 0));
+  } else {
+    predQty = filterArray(s.pred_qty, fm);
+    actualQty = filterArray(s.actual_qty, fm);
+  }
+  // 同比线数据（筛选系列/颜色/品类时不显示2025同期-全店数据不具可比性）
+  const hasSkuFilter = f.series || f.color || f.category;
+  let yoyData = [];
+  if (!hasSkuFilter && DATA.historical?.yoy_by_month) {
+    const allYoy = DATA.historical.yoy_by_month;
+    yoyData = fm.map(i => allYoy[i]?.last_year || null);
+  }
+  
+  const option = {
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e8e8e8', borderWidth: 1, textStyle: { color: '#404040', fontSize: 12 } },
+    legend: { data: ['预测销量', '实际销量', (!hasSkuFilter && yoyData.some(v => v != null)) ? '2025同期' : ''].filter(Boolean), bottom: 0, textStyle: { color: '#737373', fontSize: 12 } },
+    grid: { top: 25, bottom: 40, left: 50, right: 30, containLabel: true },
+    xAxis: { type: 'category', data: months, axisLine: { lineStyle: { color: '#e8e8e8' } }, axisLabel: { color: '#a3a3a3', interval: 0 } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#f5f5f5' } }, axisLabel: { color: '#a3a3a3' } },
+    series: [
+      { name: '预测销量', type: 'bar', data: predQty, itemStyle: { color: '#c9a962', borderRadius: [2,2,0,0] }, barWidth: '30%',
+        label: { show: true, position: 'top', formatter: p => p.value >= 0 ? p.value.toLocaleString() : '', color: '#c9a962', fontSize: 10 } },
+      { name: '实际销量', type: 'line', data: actualQty.length > 0 && actualQty.some(v => v > 0) ? actualQty : new Array(months.length).fill(null),
+        lineStyle: { color: '#525252', width: 2 }, symbol: 'circle', symbolSize: 6,
+        itemStyle: { color: '#525252' } }
+    ]
+  };
+  if (!hasSkuFilter && yoyData.some(v => v != null)) {
+    option.series.push({
+      name: '2025同期', type: 'line', data: yoyData,
+      lineStyle: { color: '#d4d4d4', width: 2, type: 'dashed' },
+      symbol: 'diamond', symbolSize: 6, itemStyle: { color: '#d4d4d4' }
+    });
+  }
+  renderChart('chartTrend', option);
+}
+
+function renderAchievementChart(s, f, fm) {
+  const months = filterArray(s.months, fm);
+  const keys = filterArray(s.months_key, fm);
+  // 如果筛选了系列或颜色或品类，从SKU明细重算
+  let target, pred, ach;
+  if ((f.series || f.color || f.category) && DATA.sku_details) {
+    let filtered = DATA.sku_details;
+    if (f.series) filtered = filtered.filter(sk => sk.series === f.series);
+    if (f.color) filtered = filtered.filter(sk => sk.color === f.color);
+    if (f.category) filtered = filtered.filter(sk => sk.category === f.category);
+    target = filterArray(s.pred_target_amt || s.target_amt, fm);
+    pred = keys.map(k => {
+      let total = filtered.reduce((a, sk) => a + (sk.amt_by_month?.[k] || 0), 0);
+      return +(total/10000).toFixed(1);
+    });
+    ach = pred.map((p, i) => target[i] > 0 ? +(p/target[i]*100).toFixed(1) : 0);
+  } else {
+    target = filterArray(s.pred_target_amt || s.target_amt, fm);
+    pred = filterArray(s.pred_amt, fm);
+    ach = filterArray(s.achievement, fm);
+  }
+  
+  const option = {
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e8e8e8', borderWidth: 1, textStyle: { color: '#404040', fontSize: 12 },
+      formatter: params => {
+        let html = `<b>${params[0].axisValue}</b><br/>`;
+        params.forEach(p => {
+          if (p.seriesName === '达成率') html += `${p.marker} ${p.seriesName}: <b>${p.value}%</b><br/>`;
+          else html += `${p.marker} ${p.seriesName}: <b>${p.value}万元</b><br/>`;
+        });
+        return html;
+      }
+    },
+    grid: { top: 35, bottom: 30, left: 55, right: 50, containLabel: true },
+    legend: { bottom: 0, left: 'center', textStyle: { fontSize: 11, color: '#737373' } },
+    xAxis: { type: 'category', data: months, axisLine: { lineStyle: { color: '#e8e8e8' } }, axisLabel: { color: '#a3a3a3', interval: 0, rotate: months.length > 6 ? 30 : 0 } },
+    yAxis: [
+      { type: 'value', name: '万元', splitLine: { lineStyle: { color: '#f5f5f5' } }, axisLabel: { color: '#a3a3a3', fontSize: 10 } },
+      { type: 'value', name: '%', max: 150, splitLine: { show: false }, axisLabel: { color: '#a3a3a3', fontSize: 10 } }
+    ],
+    series: [
+      { name: '销售目标', type: 'bar', data: target, itemStyle: { color: '#e8e8e8', borderRadius: [2,2,0,0] }, barWidth: '25%' },
+      { name: '预测金额', type: 'bar', data: pred, itemStyle: { color: '#c9a962', borderRadius: [2,2,0,0] }, barWidth: '25%' },
+      { name: '达成率', type: 'line', yAxisIndex: 1, data: ach, lineStyle: { color: '#525252', width: 2 }, symbol: 'circle', symbolSize: 5, itemStyle: { color: '#525252' },
+        label: { show: true, position: 'top', formatter: p => p.value.toFixed(1) + '%', color: '#737373', fontSize: 10 } }
+    ]
+  };
+  renderChart('chartAchievement', option);
+}
+
+function renderYoYChart(f, fm) {
+  if (!DATA.historical?.yoy_by_month) {
+    $('chartYoY').closest('.chart-card').querySelector('.chart-box').innerHTML = '';
+    return;
+  }
+  const allYoy = DATA.historical.yoy_by_month;
+  const allMom = DATA.historical.mom_by_month;
+  const months = filterArray(allYoy.map(d => d.month), fm);
+  const yoyRates = fm.map(i => allYoy[i]?.rate ?? null);
+  const momRates = fm.map(i => allMom[i]?.rate ?? null);
+  
+  const showYoy = yoyMomMode === 'yoy' || yoyMomMode === 'both';
+  const showMom = yoyMomMode === 'mom' || yoyMomMode === 'both';
+  
+  const series = [];
+  if (showYoy) {
+    series.push({
+      name: '同比', type: 'bar', data: yoyRates,
+      itemStyle: { color: '#c9a962', borderRadius: [2,2,0,0] }, barWidth: showMom ? '20%' : '35%',
+      label: { show: true, position: 'top', formatter: p => p.value != null ? p.value.toFixed(1) + '%' : '', color: '#737373', fontSize: 10 }
+    });
+  }
+  if (showMom) {
+    series.push({
+      name: '环比', type: 'bar', data: momRates,
+      itemStyle: { color: '#a3a3a3', borderRadius: [2,2,0,0] }, barWidth: showYoy ? '20%' : '35%',
+      label: { show: true, position: 'top', formatter: p => p.value != null ? p.value.toFixed(1) + '%' : '', color: '#737373', fontSize: 10 }
+    });
+  }
+  
+  const hasData = series.some(s => s.data.some(v => v != null));
+  if (!hasData) {
+    $('chartYoY').innerHTML = '';
+    return;
+  }
+  
+  const option = {
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e8e8e8', borderWidth: 1, textStyle: { color: '#404040', fontSize: 12 },
+      formatter: params => {
+        let html = `<b>${params[0].axisValue}</b><br/>`;
+        params.forEach(p => {
+          const v = p.value;
+          html += `${p.marker} ${p.seriesName}: <b>${v != null ? v.toFixed(1) + '%' : '—'}</b><br/>`;
+        });
+        return html;
+      }
+    },
+    grid: { top: 15, bottom: 20, left: 45, right: 25, containLabel: true },
+    xAxis: { type: 'category', data: months, axisLine: { lineStyle: { color: '#e8e8e8' } }, axisLabel: { color: '#a3a3a3' } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#f5f5f5' } }, axisLabel: { color: '#a3a3a3', formatter: '{value}%' } },
+    series: series
+  };
+  renderChart('chartYoY', option);
+}
+
+// ============================================================
+// 系列分析 Tab
+// ============================================================
+function renderSeries(f) {
+  const series = DATA.series || [];
+  const fm = getFilteredMonthIndices(f);
+  if (fm.length === 0) {
+    $('seriesKpi').innerHTML = '<div class="empty-state"><p>筛选期无数据</p></div>';
+    return;
+  }
+  // 如果按颜色过滤, 从SKU明细筛选
+  if (f.color && DATA.sku_details) {
+    let filteredSkus = DATA.sku_details.filter(sk => sk.color === f.color);
+    let seriesSet = [...new Set(filteredSkus.map(sk => sk.series))];
+    let filtered = series.filter(s => seriesSet.includes(s.name));
+    // 后续处理
+    filtered = filtered.map(s => ({
+      ...s,
+      total_qty: sumFiltered(s.qty_by_month, fm),
+      total_amt: sumFiltered(s.amt_by_month, fm),
+      qty_by_month_f: filterArray(s.qty_by_month, fm),
+      amt_by_month_f: filterArray(s.amt_by_month, fm)
+    }));
+    return renderSeriesContent(filtered, fm, f);
+  }
+  // 过滤系列
+  let filtered = f.series ? series.filter(s => s.name === f.series) : series;
+  // 品类过滤：从SKU明细找出属于该品类的系列
+  if (f.category && DATA.sku_details) {
+    const cats = new Set(DATA.sku_details.filter(sk => sk.category === f.category).map(sk => sk.series));
+    filtered = filtered.filter(s => cats.has(s.name));
+  }
+  
+  // 按日期过滤各系列数据
+  filtered = filtered.map(s => ({
+    ...s,
+    total_qty: sumFiltered(s.qty_by_month, fm),
+    total_amt: sumFiltered(s.amt_by_month, fm),
+    qty_by_month_f: filterArray(s.qty_by_month, fm),
+    amt_by_month_f: filterArray(s.amt_by_month, fm)
+  }));
+  
+  // KPI
+  const totalQty = filtered.reduce((a, s) => a + s.total_qty, 0);
+  const totalAmt = filtered.reduce((a, s) => a + (s.total_amt || 0), 0);
+  $('seriesKpi').innerHTML = `
+    <div class="kpi-card">
+      <div class="label">筛选系列数</div>
+      <div class="value">${filtered.length}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">合计件数</div>
+      <div class="value">${fmtNum(totalQty)}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="label">合计金额(万)</div>
+      <div class="value">¥${totalAmt.toFixed(1)}</div>
+    </div>
+  `;
+  
+  // 系列销量分布（横向柱状图）
+  const names = filtered.map(s => s.name);
+  const qtyData = filtered.map(s => s.total_qty);
+  // 限制名称宽度，用换行处理长名
+  renderChart('chartSeriesBar', {
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e8e8e8', borderWidth: 1, textStyle: { color: '#404040', fontSize: 12 } },
+    grid: { top: 20, bottom: 10, left: 10, right: 50, containLabel: true },
+    xAxis: { type: 'value', splitLine: { lineStyle: { color: '#f5f5f5' } }, axisLabel: { color: '#a3a3a3' } },
+    yAxis: { type: 'category', data: [...names].reverse(), axisLine: { lineStyle: { color: '#e8e8e8' } },
+      axisLabel: { color: '#404040', fontSize: 11, width: 160, overflow: 'truncate' } },
+    series: [{ type: 'bar', data: [...qtyData].reverse(), itemStyle: { color: '#c9a962', borderRadius: [0,3,3,0] }, barWidth: '60%',
+      label: { show: true, position: 'right', formatter: p => fmtNum(p.value), color: '#737373', fontSize: 11 } }]
+  });
+  
+  renderSeriesContent(filtered, fm, f);
+}
+
+function renderSeriesContent(filtered, fm, f) {
+  // 系列达成率排行 = 各系列预测金额 / 筛选日期内总目标 * 100
+  const filteredTarget = DATA.summary.target_amt ? filterArray(DATA.summary.target_amt, fm).reduce((a,b) => a+b, 0) : 0;
+  const sAch = filtered.map(s => ({
+    name: s.name, qty: s.total_qty, amt: s.total_amt,
+    ach: filteredTarget > 0 ? (s.total_amt / filteredTarget * 100) : 0
+  })).sort((a, b) => b.ach - a.ach).slice(0, 10);
+  renderChart('chartSeriesAch', {
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e8e8e8', borderWidth: 1, textStyle: { color: '#404040', fontSize: 12 },
+      formatter: p => `${p[0].name}: ${p[0].value.toFixed(1)}%（占年度目标比）` },
+    grid: { top: 20, bottom: 10, left: 10, right: 60, containLabel: true },
+    xAxis: { type: 'value', splitLine: { lineStyle: { color: '#f5f5f5' } }, axisLabel: { color: '#a3a3a3', formatter: '{value}%' } },
+    yAxis: { type: 'category', data: sAch.map(d => d.name).reverse(), axisLine: { lineStyle: { color: '#e8e8e8' } },
+      axisLabel: { color: '#404040', fontSize: 11, width: 160, overflow: 'truncate' } },
+    series: [{ type: 'bar', data: sAch.map(d => +d.ach.toFixed(1)).reverse(), itemStyle: { color: '#c9a962', borderRadius: [0,3,3,0] }, barWidth: '60%',
+      label: { show: true, position: 'right', formatter: p => p.value.toFixed(1) + '%', color: '#737373', fontSize: 11 } }]
+  });
+  
+  // 系列同环比 = TOP5的同比/环比对比
+  renderSeriesCompare(filtered, fm);
+  // 表格（受SKU开关控制）
+  renderSeriesTable(filtered, fm, f);
+}
+
+function renderSeriesCompare(filtered, fm) {
+  const months = filterArray(DATA.summary?.months || [], fm);
+  const top5 = filtered.slice(0, 5);
+  
+  const showYoy = seriesYoyMomMode === 'yoy' || seriesYoyMomMode === 'all';
+  const showMom = seriesYoyMomMode === 'mom' || seriesYoyMomMode === 'all';
+  
+  // 获取同比/环比数据
+  let yoyData = [], momData = [];
+  if (DATA.historical?.yoy_by_month) {
+    yoyData = fm.map(i => DATA.historical.yoy_by_month[i]?.rate ?? null);
+  }
+  if (DATA.historical?.mom_by_month) {
+    momData = fm.map(i => DATA.historical.mom_by_month[i]?.rate ?? null);
+  }
+  
+  const colors = ['#c9a962', '#a68b4b', '#d4b870', '#737373', '#525252'];
+  
+  // 图例和系列数据
+  let legendData = [];
+  let seriesData = [];
+  
+  if (showYoy) {
+    legendData.push('同比');
+    seriesData.push({ name: '同比', type: 'bar', barWidth: '12%', data: yoyData, itemStyle: { color: '#c9a962', borderRadius: [2,2,0,0] } });
+  }
+  if (showMom) {
+    legendData.push('环比');
+    seriesData.push({ name: '环比', type: 'bar', barWidth: '12%', data: momData, itemStyle: { color: '#a3a3a3', borderRadius: [2,2,0,0] } });
+  }
+  legendData = legendData.concat(top5.map(s => s.name));
+  
+  const option = {
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e8e8e8', borderWidth: 1, textStyle: { color: '#404040', fontSize: 12 },
+      formatter: params => {
+        let html = `<b>${params[0].axisValue}</b><br/>`;
+        params.forEach(p => {
+          const v = p.value;
+          if (p.seriesName === '同比' || p.seriesName === '环比') {
+            html += `${p.marker} ${p.seriesName}: <b>${v != null ? v.toFixed(1) + '%' : '—'}</b><br/>`;
+          } else {
+            html += `${p.marker} ${p.seriesName}: <b>${v != null ? fmtNum(v) : '—'}</b><br/>`;
+          }
+        });
+        return html;
+      }
+    },
+    legend: { data: legendData, bottom: 0, textStyle: { color: '#737373', fontSize: 10 } },
+    grid: { top: 15, bottom: 40, left: 40, right: 30, containLabel: true },
+    xAxis: { type: 'category', data: months, axisLine: { lineStyle: { color: '#e8e8e8' } }, axisLabel: { color: '#a3a3a3' } },
+    series: seriesData
+  };
+  
+  // 叠加TOP5系列的月度趋势线（件数，右轴）
+  top5.forEach((s, i) => {
+    option.series.push({
+      name: s.name, type: 'line',
+      data: filterArray(s.qty_by_month, fm).map(v => v > 0 ? v : null),
+      smooth: true, lineStyle: { width: 2, color: colors[i % colors.length] },
+      symbol: 'circle', symbolSize: 4, itemStyle: { color: colors[i % colors.length] },
+      yAxisIndex: 1
+    });
+  });
+  
+  option.yAxis = [
+    { type: 'value', splitLine: { lineStyle: { color: '#f5f5f5' } }, axisLabel: { color: '#a3a3a3', formatter: '{value}%' } },
+    { type: 'value', splitLine: { show: false }, axisLabel: { color: '#a3a3a3' } }
+  ];
+  
+  renderChart('chartSeriesCompare', option);
+}
+
+function renderSeriesTable(filtered, fm, f) {
+  if (!f.showSku) {
+    $('seriesTableWrap').innerHTML = '<div class="empty-state" style="text-align:center;padding:20px;color:#9ca3af;">SKU明细已隐藏</div>';
+    return;
+  }
+  const months = filterArray(DATA.summary?.months || [], fm);
+  if (filtered.length === 0 || months.length === 0) {
+    $('seriesTableWrap').innerHTML = '<div class="empty-state"><p>暂无数据</p></div>';
+    return;
+  }
+  let html = `<table>
+    <thead><tr><th>系列</th><th>合计件数</th><th>合计金额(万)</th>`;
+  months.forEach(m => { html += `<th>${m}</th>`; });
+  html += `</tr></thead><tbody>`;
+  
+  filtered.forEach(s => {
+    html += `<tr>
+      <td class="gold" style="max-width:200px;white-space:normal;word-break:break-word;">${s.name}</td>
+      <td class="num">${fmtNum(s.total_qty)}</td>
+      <td class="num">¥${s.total_amt.toFixed(1)}</td>`;
+    (s.qty_by_month_f || []).forEach(q => {
+      html += `<td class="num">${q > 0 ? fmtNum(q) : '-'}</td>`;
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody></table>`;
+  $('seriesTableWrap').innerHTML = html;
+}
+
+// ============================================================
+// SKU明细 Tab
+// ============================================================
+function renderSku(f) {
+  if (!f.showSku) {
+    $('skuContent').innerHTML = '<div style="text-align:center;padding:60px 20px;color:#9ca3af;"><p>SKU明细已隐藏，点击筛选栏的「SKU明细」开关可显示</p></div>';
+    return;
+  }
+  
+  const fm = getFilteredMonthIndices(f);
+  const months = filterArray(DATA.summary?.months || [], fm);
+  const keys = filterArray(DATA.summary?.months_key || [], fm);
+  
+  let skus = DATA.sku_details || [];
+  
+  // 筛选
+  const searchVal = ($('skuSearch')?.value || '').trim().toLowerCase();
+  const sFilter = $('skuSeriesFilter')?.value || '';
+  const cFilter = $('skuColorFilter')?.value || '';
+  
+  if (f.series) skus = skus.filter(sk => sk.series === f.series);
+  if (f.category) skus = skus.filter(sk => sk.category === f.category);
+  if (sFilter) skus = skus.filter(sk => sk.series === sFilter);
+  if (cFilter) skus = skus.filter(sk => sk.color === cFilter);
+  if (searchVal) skus = skus.filter(sk => sk.sku.toLowerCase().includes(searchVal) || sk.name.toLowerCase().includes(searchVal));
+  
+  // 按日期范围计算各SKU的合计
+  const skuRows = skus.map(sk => {
+    const predMonths = sk.pred_by_month || {};
+    let totalPred = 0;
+    keys.forEach(k => { totalPred += predMonths[k] || 0; });
+    const actualMonths = sk.actual_by_month || {};
+    let totalActual = 0;
+    keys.forEach(k => { totalActual += actualMonths[k] || 0; });
+    return { ...sk, totalPred, totalActual };
+  });
+  
+  // KPI
+  $('skuKpi').innerHTML = `
+    <div class="kpi-card"><div class="label">筛选SKU</div><div class="value">${skuRows.length}</div></div>
+    <div class="kpi-card"><div class="label">预测合计</div><div class="value">${fmtNum(skuRows.reduce((a, sk) => a + sk.totalPred, 0))}</div></div>
+    <div class="kpi-card"><div class="label">实际合计</div><div class="value">${fmtNum(skuRows.reduce((a, sk) => a + sk.totalActual, 0))}</div></div>
+  `;
+  
+  // 表格
+  let html = `<table><thead><tr>
+    <th>SKU编码</th><th>商品名称</th><th>系列</th><th>颜色</th><th>尺寸</th><th>品类</th><th>吊牌价</th>
+    <th>预测合计</th><th>实际合计</th>`;
+  months.forEach(m => { html += `<th>${m}</th>`; });
+  html += `</tr></thead><tbody>`;
+  
+  skuRows.forEach(sk => {
+    html += `<tr>
+      <td style="font-family:monospace;font-size:11px;color:var(--gray-400)">${sk.sku}</td>
+      <td>${sk.name}</td>
+      <td class="gold">${sk.series}</td>
+      <td>${sk.color}</td>
+      <td>${sk.size}</td>
+      <td>${sk.category}</td>
+      <td class="num">${sk.price > 0 ? '¥' + fmtNum(sk.price) : '-'}</td>
+      <td class="num gold">${fmtNum(sk.totalPred)}</td>
+      <td class="num">${fmtNum(sk.totalActual)}</td>`;
+    keys.forEach(k => {
+      const pv = sk.pred_by_month?.[k] || 0;
+      html += `<td class="num">${pv > 0 ? fmtNum(pv) : '-'}</td>`;
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody></table>`;
+  $('skuTableWrap').innerHTML = html;
+}
+
+// ============================================================
+// 占比分析 Tab
+// ============================================================
+function renderRatio(f) {
+  const fm = getFilteredMonthIndices(f);
+  const series = $('ratioSeriesFilter')?.value || f.series || '';
+  const mode = $('ratioMode')?.value || 'color';
+  const keys = filterArray(DATA.summary?.months_key || [], fm);
+  
+  // 从SKU明细动态计算：按筛选日期、系列、颜色过滤
+  let skus = DATA.sku_details || [];
+  if (series) skus = skus.filter(sk => sk.series === series);
+  if (f.color) skus = skus.filter(sk => sk.color === f.color);
+  
+  // 按筛选月份汇总各维度
+  const predColor = {}, predSize = {}, predCross = {};
+  const actualColor = {}, actualSize = {}, actualCross = {};
+  
+  skus.forEach(sk => {
+    const sp = keys.reduce((s, k) => s + (sk.pred_by_month?.[k] || 0), 0);
+    const sa = keys.reduce((s, k) => s + (sk.actual_by_month?.[k] || 0), 0);
+    if (sp > 0) {
+      predColor[sk.color] = (predColor[sk.color] || 0) + sp;
+      predSize[sk.size] = (predSize[sk.size] || 0) + sp;
+      predCross[sk.color + '|' + sk.size] = (predCross[sk.color + '|' + sk.size] || 0) + sp;
+    }
+    if (sa > 0) {
+      actualColor[sk.color] = (actualColor[sk.color] || 0) + sa;
+      actualSize[sk.size] = (actualSize[sk.size] || 0) + sa;
+      actualCross[sk.color + '|' + sk.size] = (actualCross[sk.color + '|' + sk.size] || 0) + sa;
+    }
+  });
+  
+  // 转成与原来兼容的数据格式
+  const colorData = [{ series: series || '全部', colors: [...new Set([...Object.keys(predColor), ...Object.keys(actualColor)])], actual: actualColor, pred: predColor }];
+  const sizeData = [{ series: series || '全部', sizes: [...new Set([...Object.keys(predSize), ...Object.keys(actualSize)])], actual: actualSize, pred: predSize }];
+  const crossData = [{ series: series || '全部', items: [...new Set([...Object.keys(predCross), ...Object.keys(actualCross)])], actual: actualCross, pred: predCross }];
+  if (mode === 'color') {
+    renderColorRatio(colorData, fm);
+  } else if (mode === 'size') {
+    renderSizeRatio(sizeData, fm);
+  } else {
+    renderCrossRatio(crossData, fm);
+  }
+  // SKU开关控制明细表显示
+  const ratioWrap = document.querySelector('#panel-ratio .collapse-wrap');
+  if (ratioWrap) ratioWrap.style.display = f.showSku ? '' : 'none';
+}
+
+function renderColorRatio(data, fm) {
+  const actualMap = {};
+  const predMap = {};
+  data.forEach(d => {
+    if (d.actual) Object.entries(d.actual).forEach(([k, v]) => { actualMap[k] = (actualMap[k] || 0) + v; });
+    if (d.pred) Object.entries(d.pred).forEach(([k, v]) => { predMap[k] = (predMap[k] || 0) + v; });
+  });
+  
+  const colors = Object.keys({...actualMap, ...predMap}).sort();
+  const totalAct = Object.values(actualMap).reduce((a, b) => a + b, 0);
+  const totalPred = Object.values(predMap).reduce((a, b) => a + b, 0);
+  const goldColors = goldGradient();
+  
+  renderChart('ratioPredChart', {
+    tooltip: { trigger: 'item', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e8e8e8', borderWidth: 1, textStyle: { color: '#404040', fontSize: 12 }, formatter: p => `${p.name}: ${fmtNum(p.value)}件 (${(p.percent || 0).toFixed(1)}%)` },
+    series: [{ type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'], data: colors.map(c => ({ name: c, value: predMap[c] || 0, itemStyle: { color: goldColors[colors.indexOf(c) % goldColors.length] } })), label: { color: '#404040', fontSize: 11, formatter: p => `${p.name}: ${(p.percent || 0).toFixed(1)}%` }, labelLine: { lineStyle: { color: '#d4d4d4' } } }]
+  });
+  renderChart('ratioActualChart', {
+    tooltip: { trigger: 'item', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e8e8e8', borderWidth: 1, textStyle: { color: '#404040', fontSize: 12 }, formatter: p => `${p.name}: ${fmtNum(p.value)}件 (${(p.percent || 0).toFixed(1)}%)` },
+    series: [{ type: 'pie', radius: ['40%', '70%'], center: ['50%', '50%'], data: colors.map(c => ({ name: c, value: actualMap[c] || 0, itemStyle: { color: goldColors[colors.indexOf(c) % goldColors.length] } })), label: { color: '#404040', fontSize: 11, formatter: p => `${p.name}: ${(p.percent || 0).toFixed(1)}%` }, labelLine: { lineStyle: { color: '#d4d4d4' } } }]
+  });
+  
+  let html = `<table><thead><tr><th>颜色</th><th>预测件数</th><th>预测占比</th><th>实际件数</th><th>实际占比</th><th>占比偏差</th></tr></thead><tbody>`;
+  colors.forEach(c => {
+    const pv = predMap[c] || 0; const av = actualMap[c] || 0;
+    const pPct = totalPred > 0 ? (pv / totalPred * 100).toFixed(1) : 0;
+    const aPct = totalAct > 0 ? (av / totalAct * 100).toFixed(1) : 0;
+    const dev = (aPct - pPct).toFixed(1);
+    html += `<tr><td>${c}</td><td class="num">${fmtNum(pv)}</td><td class="num">${pPct}%</td><td class="num">${fmtNum(av)}</td><td class="num">${aPct}%</td><td class="num ${dev > 0 ? 'up' : 'down'}">${dev > 0 ? '+' : ''}${dev}%</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  $('ratioTableWrap').innerHTML = html;
+}
+
+function renderSizeRatio(data, fm) {
+  const actualMap = {}; const predMap = {};
+  data.forEach(d => {
+    if (d.actual) Object.entries(d.actual).forEach(([k, v]) => { actualMap[k] = (actualMap[k] || 0) + v; });
+    if (d.pred) Object.entries(d.pred).forEach(([k, v]) => { predMap[k] = (predMap[k] || 0) + v; });
+  });
+  const sizes = Object.keys({...actualMap, ...predMap}).sort();
+  const totalAct = Object.values(actualMap).reduce((a, b) => a + b, 0);
+  const totalPred = Object.values(predMap).reduce((a, b) => a + b, 0);
+  
+  renderChart('ratioPredChart', {
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e8e8e8', borderWidth: 1, textStyle: { color: '#404040', fontSize: 12 }, formatter: p => `${p[0].axisValue}: ${p[0].value.toFixed(1)}%` },
+    grid: { top: 15, bottom: 30, left: 50, right: 40, containLabel: true },
+    xAxis: { type: 'category', data: sizes, axisLine: { lineStyle: { color: '#e8e8e8' } }, axisLabel: { color: '#a3a3a3' } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#f5f5f5' } }, axisLabel: { color: '#a3a3a3', formatter: '{value}%' } },
+    series: [{ type: 'bar', data: sizes.map(s => totalPred > 0 ? (predMap[s] || 0) / totalPred * 100 : 0), itemStyle: { color: '#c9a962', borderRadius: [2,2,0,0] }, barWidth: '40%', label: { show: true, position: 'top', formatter: p => p.value.toFixed(1) + '%', color: '#737373', fontSize: 11 } }]
+  });
+  renderChart('ratioActualChart', {
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e8e8e8', borderWidth: 1, textStyle: { color: '#404040', fontSize: 12 }, formatter: p => `${p[0].axisValue}: ${p[0].value.toFixed(1)}%` },
+    grid: { top: 15, bottom: 30, left: 50, right: 40, containLabel: true },
+    xAxis: { type: 'category', data: sizes, axisLine: { lineStyle: { color: '#e8e8e8' } }, axisLabel: { color: '#a3a3a3' } },
+    yAxis: { type: 'value', splitLine: { lineStyle: { color: '#f5f5f5' } }, axisLabel: { color: '#a3a3a3', formatter: '{value}%' } },
+    series: [{ type: 'bar', data: sizes.map(s => totalAct > 0 ? (actualMap[s] || 0) / totalAct * 100 : 0), itemStyle: { color: '#c9a962', borderRadius: [2,2,0,0] }, barWidth: '40%', label: { show: true, position: 'top', formatter: p => p.value.toFixed(1) + '%', color: '#737373', fontSize: 11 } }]
+  });
+  let html = `<table><thead><tr><th>尺寸</th><th>预测件数</th><th>预测占比</th><th>实际件数</th><th>实际占比</th><th>占比偏差</th></tr></thead><tbody>`;
+  sizes.forEach(s => {
+    const pv = predMap[s] || 0; const av = actualMap[s] || 0;
+    const pPct = totalPred > 0 ? (pv / totalPred * 100).toFixed(1) : 0;
+    const aPct = totalAct > 0 ? (av / totalAct * 100).toFixed(1) : 0;
+    const dev = (aPct - pPct).toFixed(1);
+    html += `<tr><td>${s}</td><td class="num">${fmtNum(pv)}</td><td class="num">${pPct}%</td><td class="num">${fmtNum(av)}</td><td class="num">${aPct}%</td><td class="num ${dev > 0 ? 'up' : 'down'}">${dev > 0 ? '+' : ''}${dev}%</td></tr>`;
+  });
+  html += `</tbody></table>`;
+  $('ratioTableWrap').innerHTML = html;
+}
+
+function renderCrossRatio(data, fm) {
+  const colorSet = new Set(); const sizeSet = new Set();
+  const actualMatrix = {}; const predMatrix = {};
+  data.forEach(d => {
+    if (d.actual) Object.entries(d.actual).forEach(([k, v]) => {
+      const [c, sz] = k.split('|'); if (c && sz) { colorSet.add(c); sizeSet.add(sz); actualMatrix[k] = (actualMatrix[k] || 0) + v; }
+    });
+    if (d.pred) Object.entries(d.pred).forEach(([k, v]) => {
+      const [c, sz] = k.split('|'); if (c && sz) { colorSet.add(c); sizeSet.add(sz); predMatrix[k] = (predMatrix[k] || 0) + v; }
+    });
+  });
+  const colors = [...colorSet].sort(); const sizes = [...sizeSet].sort();
+  
+  // 预计算各热力图的百分比
+  const predTotal = Object.values(predMatrix).reduce((a, b) => a + b, 0);
+  const actTotal = Object.values(actualMatrix).reduce((a, b) => a + b, 0);
+  
+  const heatData = [];
+  sizes.forEach((sz, si) => { colors.forEach((c, ci) => {
+    const val = predMatrix[`${c}|${sz}`] || 0;
+    heatData.push([ci, si, predTotal > 0 ? +(val / predTotal * 100).toFixed(1) : 0]);
+  }); });
+  const maxVal = Math.max(...heatData.map(d => d[2]), 1);
+  
+  renderChart('ratioPredChart', {
+    tooltip: { position: 'top', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e8e8e8', borderWidth: 1, textStyle: { color: '#404040', fontSize: 12 },
+      formatter: p => {
+        const ci = p.data[0], si = p.data[1];
+        const c = colors[ci], sz = sizes[si];
+        const raw = predMatrix[`${c}|${sz}`] || 0;
+        return `<b>${c} × ${sz}</b><br/>预测件数: ${fmtNum(raw)}<br/>占比: ${(p.data[2] || 0).toFixed(1)}%`;
+      }
+    },
+    grid: { top: 10, bottom: 40, left: 80, right: 20, containLabel: true },
+    xAxis: { type: 'category', data: colors, axisLine: { lineStyle: { color: '#e8e8e8' } }, axisLabel: { color: '#a3a3a3', rotate: 30, fontSize: 10 } },
+    yAxis: { type: 'category', data: sizes, axisLine: { lineStyle: { color: '#e8e8e8' } }, axisLabel: { color: '#a3a3a3', fontSize: 10 } },
+    visualMap: { min: 0, max: Math.min(maxVal, 100), calculable: true, inRange: { color: ['#f5f0e0', '#e8d5a3', '#c9a962', '#a68b4b'] }, textStyle: { color: '#737373' }, formatter: '{value}%' },
+    series: [{ type: 'heatmap', data: heatData, label: { show: true, color: '#404040', fontSize: 10, formatter: p => p.data[2] > 0 ? p.data[2].toFixed(1) + '%' : '' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }]
+  });
+  
+  const heatData2 = [];
+  sizes.forEach((sz, si) => { colors.forEach((c, ci) => {
+    const val = actualMatrix[`${c}|${sz}`] || 0;
+    heatData2.push([ci, si, actTotal > 0 ? +(val / actTotal * 100).toFixed(1) : 0]);
+  }); });
+  const maxVal2 = Math.max(...heatData2.map(d => d[2]), 1);
+  
+  renderChart('ratioActualChart', {
+    tooltip: { position: 'top', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e8e8e8', borderWidth: 1, textStyle: { color: '#404040', fontSize: 12 },
+      formatter: p => {
+        const ci = p.data[0], si = p.data[1];
+        const c = colors[ci], sz = sizes[si];
+        const raw = actualMatrix[`${c}|${sz}`] || 0;
+        return `<b>${c} × ${sz}</b><br/>实际件数: ${fmtNum(raw)}<br/>占比: ${(p.data[2] || 0).toFixed(1)}%`;
+      }
+    },
+    grid: { top: 10, bottom: 40, left: 80, right: 20, containLabel: true },
+    xAxis: { type: 'category', data: colors, axisLine: { lineStyle: { color: '#e8e8e8' } }, axisLabel: { color: '#a3a3a3', rotate: 30, fontSize: 10 } },
+    yAxis: { type: 'category', data: sizes, axisLine: { lineStyle: { color: '#e8e8e8' } }, axisLabel: { color: '#a3a3a3', fontSize: 10 } },
+    visualMap: { min: 0, max: Math.min(maxVal2, 100), calculable: true, inRange: { color: ['#f5f0e0', '#e8d5a3', '#c9a962', '#a68b4b'] }, textStyle: { color: '#737373' }, formatter: '{value}%' },
+    series: [{ type: 'heatmap', data: heatData2, label: { show: true, color: '#404040', fontSize: 10, formatter: p => p.data[2] > 0 ? p.data[2].toFixed(1) + '%' : '' }, emphasis: { itemStyle: { shadowBlur: 10, shadowColor: 'rgba(0,0,0,0.15)' } } }]
+  });
+  // ===== 矩阵表（颜色×尺寸的件数/占比） =====
+  let html = `<div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--gray-700);padding:0 0 4px 0">颜色×尺寸 — 实际件数分布</div>`;
+  html += `<table class="compact-table"><thead><tr><th>颜色</th>${sizes.map(s => `<th>${s} (件)</th><th>${s} (占比)</th>`).join('')}</tr></thead><tbody>`;
+  colors.forEach(c => {
+    html += `<tr><td class="gold">${c}</td>`;
+    sizes.forEach(sz => {
+      const key = `${c}|${sz}`;
+      const raw = actualMatrix[key] || 0;
+      const pct = actTotal > 0 ? (raw / actTotal * 100).toFixed(1) : '0.0';
+      html += `<td class="num">${raw > 0 ? fmtNum(raw) : '-'}</td><td class="num">${raw > 0 ? pct + '%' : '-'}</td>`;
+    });
+    html += `</tr>`;
+  });
+  html += `</tbody></table>
+  <div style="padding:6px 0 16px 0;font-size:11px;color:var(--gray-400);">数据时间维度：全量历史销售数据（2024-2026）</div>`;
+  
+  // ===== 偏差分析表（预测vs实际偏差明细） =====
+  html += `<div style="margin-bottom:6px;font-size:13px;font-weight:600;color:var(--gray-700);">颜色×尺寸 — 预测vs实际偏差</div>`;
+  // 构建所有组合的偏差数据
+  const devRows = [];
+  sizes.forEach(sz => { colors.forEach(c => {
+    const key = `${c}|${sz}`;
+    const pred = predMatrix[key] || 0;
+    const act = actualMatrix[key] || 0;
+    if (pred > 0 || act > 0) {
+      const dev = act - pred;
+      const devRate = pred > 0 ? (dev / pred * 100) : (act > 0 ? 100 : 0);
+      const predPct = predTotal > 0 ? (pred / predTotal * 100) : 0;
+      const actPct = actTotal > 0 ? (act / actTotal * 100) : 0;
+      devRows.push({ c, sz, pred, act, dev, devRate, predPct, actPct });
+    }
+  }); });
+  devRows.sort((a, b) => Math.abs(b.dev) - Math.abs(a.dev));
+  
+  html += `<table class="compact-table"><thead><tr>
+    <th>颜色</th><th>尺寸</th>
+    <th>预测件数</th><th>实际件数</th>
+    <th style="color:var(--gold-dark)">偏差(件)</th><th>偏差率</th>
+    <th>预测占比</th><th>实际占比</th><th>占比差</th>
+  </tr></thead><tbody>`;
+  devRows.forEach(r => {
+    const devStr = r.dev >= 0 ? `+${r.dev}` : `${r.dev}`;
+    const devClass = r.dev >= 0 ? 'up' : 'down';
+    const pctDev = (r.actPct - r.predPct).toFixed(1);
+    html += `<tr>
+      <td>${r.c}</td><td>${r.sz}</td>
+      <td class="num">${fmtNum(r.pred)}</td><td class="num">${fmtNum(r.act)}</td>
+      <td class="num ${devClass}">${devStr}</td>
+      <td class="num ${devClass}">${r.devRate.toFixed(1)}%</td>
+      <td class="num">${r.predPct.toFixed(1)}%</td>
+      <td class="num">${r.actPct.toFixed(1)}%</td>
+      <td class="num ${pctDev > 0 ? 'up' : 'down'}">${pctDev > 0 ? '+' : ''}${pctDev}%</td>
+    </tr>`;
+  });
+  html += `</tbody></table>`;
+  
+  $('ratioTableWrap').innerHTML = html;
+}
+
+// 占比模式切换
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const modeSel = $('ratioMode');
+    if (modeSel) modeSel.addEventListener('change', () => { if (document.querySelector('#panel-ratio.active')) renderRatio(getActiveFilters()); });
+    const ratioSeries = $('ratioSeriesFilter');
+    if (ratioSeries) ratioSeries.addEventListener('change', () => { if (document.querySelector('#panel-ratio.active')) renderRatio(getActiveFilters()); });
+  }, 500);
+});
+
+// ============================================================
+// 验真 Tab
+// ============================================================
+function renderVerify(f) {
+  const cal = DATA.calibration;
+  if (!cal || !cal.months) {
+    $('verifyMetrics').innerHTML = '<div class="empty-state"><p>暂无验真数据</p></div>';
+    return;
+  }
+  
+  const vMonth = $('verifyMonth')?.value || '';
+  
+  // 筛选
+  let skuLevel = cal.sku_level || [];
+  if (f.category) skuLevel = skuLevel.filter(d => d.category === f.category);
+  if (f.series) skuLevel = skuLevel.filter(d => d.series === f.series);
+  if (f.color) skuLevel = skuLevel.filter(d => d.color === f.color);
+  if (vMonth) skuLevel = skuLevel.filter(d => d.month_key === vMonth);
+  
+  // 整体准确率：偏差±20%以内的SKU占比
+  const totalPred = skuLevel.reduce((a, d) => a + d.pred_qty, 0);
+  const totalAct = skuLevel.reduce((a, d) => a + d.actual_qty, 0);
+  const dev = totalAct - totalPred;
+  const totalSkus = skuLevel.length;
+  const within20 = skuLevel.filter(d => {
+    const rate = d.pred_qty > 0 ? Math.abs(d.deviation) / d.pred_qty : 0;
+    return rate <= 0.2;
+  }).length;
+  const overallAcc = totalSkus > 0 ? (within20 / totalSkus * 100) : 0;
+
+  const overallRate = totalPred > 0 ? (totalAct / totalPred * 100) : 0;
+  $('verifyMetrics').innerHTML = [
+    {l:'SKU数(筛选)', v:totalSkus, c:'#6b7280'},
+    {l:'偏差≤20%', v:within20, c:'var(--success)'},
+    {l:'整体准确率(±20%)', v:overallAcc.toFixed(1)+'%', c:'#c9a962'},
+    {l:'整体达成率', v:overallRate.toFixed(1)+'%', c:'#c9a962'},
+    {l:'预测件数', v:fmtNum(totalPred), c:'#525252'},
+    {l:'实际件数', v:fmtNum(totalAct), c:'#c9a962'},
+    {l:'偏差', v:(dev>=0?'+':'')+fmtNum(dev), c:dev>=0?'#22c55e':'#ef4444'},
+  ].map(m => `<div style="background:#fff;border-radius:8px;padding:8px 12px;min-width:80px;box-shadow:0 1px 2px rgba(0,0,0,.06)"><div style="font-size:10px;color:#9ca3af;margin-bottom:2px">${m.l}</div><div style="font-size:16px;font-weight:700;color:${m.c}">${m.v}</div></div>`).join('');
+  
+  // 逐月达成率
+  const months = cal.months || [];
+  const accuracyData = months.map(m => {
+    const md = (cal.sku_level || []).filter(d => d.month_key === m.month_key);
+    if (f.series) {
+      const f2 = md.filter(d => d.series === f.series);
+      const sumPred = f2.reduce((a,d) => a + d.pred_qty, 0);
+      const sumAct = f2.reduce((a,d) => a + d.actual_qty, 0);
+      return { month: m.month, ratio: sumPred > 0 ? +(sumAct / sumPred * 100).toFixed(1) : 0 };
+    }
+    return { month: m.month, ratio: m.pred_qty > 0 ? +(m.actual_qty / m.pred_qty * 100).toFixed(1) : 0 };
+  });
+  
+  renderChart('verifyAccuracyChart', {
+    tooltip: { trigger: 'axis', backgroundColor: 'rgba(255,255,255,0.95)', borderColor: '#e8e8e8', borderWidth: 1, textStyle: { color: '#404040', fontSize: 12 },
+      formatter: params => { const p = params[0]; return `<b>${p.axisValue}</b><br/>达成率: <b>${p.value.toFixed(1)}%</b>`; }
+    },
+    grid: { top: 15, bottom: 20, left: 45, right: 20, containLabel: true },
+    xAxis: { type: 'category', data: accuracyData.map(d => d.month), axisLine: { lineStyle: { color: '#e8e8e8' } }, axisLabel: { color: '#a3a3a3' } },
+    yAxis: { type: 'value', min: 0, max: 150, splitLine: { lineStyle: { color: '#f5f5f5' } }, axisLabel: { color: '#a3a3a3', formatter: '{value}%' } },
+    series: [{ type: 'bar', data: accuracyData.map(d => d.ratio), itemStyle: { color: '#c9a962', borderRadius: [2,2,0,0] }, barWidth: '40%',
+      label: { show: true, position: 'top', formatter: p => { const v = p.value.toFixed(1); return v + '%'; }, color: '#737373', fontSize: 11 } }]
+  });
+  
+  // 偏差异常SKU：实际/预测 超出80%~120%范围，按偏离幅度排序
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth() + 1;
+  let highDev = skuLevel.filter(d => {
+    if (!d.pred_qty || d.pred_qty <= 0 || !d.actual_qty) return false;
+    const ratio = d.actual_qty / d.pred_qty;
+    // 当前月份：用MTD进度折算期望
+    if (d.month_key) {
+      const m = parseInt(d.month_key.split('-')[1]);
+      if (m === currentMonth && currentYear === 2026) {
+        const daysInMonth = new Date(currentYear, m, 0).getDate();
+        const mtdProgress = Math.min(1, (now.getDate()) / daysInMonth);
+        const expected = d.pred_qty * mtdProgress;
+        if (expected <= 0) return false;
+        const mtdRatio = d.actual_qty / expected;
+        return mtdRatio < 0.8 || mtdRatio > 1.2;
+      }
+    }
+    // 已完结月份：直接看月度比率
+    return ratio < 0.8 || ratio > 1.2;
+  }).map(d => {
+    const ratio = d.actual_qty / d.pred_qty;
+    // 偏离幅度 = 离开区间边界的距离
+    const devMargin = ratio < 0.8 ? (0.8 - ratio) : (ratio - 1.2);
+    return {...d, devMargin, ratio};
+  }).sort((a, b) => b.devMargin - a.devMargin).slice(0, 50);
+
+  // ===== 系列偏差概览 =====
+  const seriesMap = {};
+  skuLevel.forEach(d => {
+    const k = d.series || '未分类';
+    if (!seriesMap[k]) seriesMap[k] = { series: k, pred: 0, act: 0, count: 0 };
+    seriesMap[k].pred += d.pred_qty || 0;
+    seriesMap[k].act += d.actual_qty || 0;
+    seriesMap[k].count += 1;
+  });
+  const seriesRows = Object.values(seriesMap).map(s => {
+    s.dev = s.act - s.pred;
+    s.devRate = s.pred > 0 ? Math.abs(s.dev) / s.pred : 0;
+    s.achRate = s.pred > 0 ? (s.act / s.pred * 100) : 0;
+    return s;
+  }).sort((a, b) => Math.abs(b.dev) - Math.abs(a.dev));
+
+  if (seriesRows.length > 0) {
+    let shtml = `<table><thead><tr><th>排名</th><th>系列</th><th>SKU数</th><th>预测件数</th><th>实际件数</th><th>偏差(件)</th><th>偏差率</th><th>达成率</th></tr></thead><tbody>`;
+    seriesRows.forEach((s, i) => {
+      const devStr = s.dev >= 0 ? `+${s.dev}` : `${s.dev}`;
+      const devRatePct = (s.devRate * 100).toFixed(1);
+      const achColor = s.achRate < 80 ? '#ef4444' : (s.achRate > 120 ? '#f59e0b' : '#22c55e');
+      const rowId = `seriesTop${i}`;
+      shtml += `<tr class="${i%2===0?'':'alt'}" style="cursor:pointer" onclick="document.getElementById('${rowId}').classList.toggle('open')">
+        <td class="num">${i+1}</td>
+        <td style="font-weight:600;color:var(--gold-dark)">${s.series}</td>
+        <td class="num">${s.count}</td>
+        <td class="num">${fmtNum(s.pred)}</td>
+        <td class="num">${fmtNum(s.act)}</td>
+        <td class="num" style="color:${s.dev<0?'#ef4444':'#22c55e'};font-weight:700">${devStr}</td>
+        <td class="num">${devRatePct}%</td>
+        <td class="num" style="color:${achColor};font-weight:700">${s.achRate.toFixed(1)}%</td>
+      </tr>`;
+      // 展开：TOP5 SKU
+      const top5 = skuLevel.filter(d => d.series === s.series)
+        .sort((a, b) => Math.abs(b.deviation) - Math.abs(a.deviation))
+        .slice(0, 5);
+      if (top5.length > 0) {
+        shtml += `<tr id="${rowId}" class="series-top-row"><td colspan="8" style="padding:0;border:0">
+          <div style="padding:8px 10px;background:var(--gray-50);border-top:1px solid var(--gray-200)">
+            <div style="font-size:11px;color:var(--gray-500);margin-bottom:6px;font-weight:600">${s.series} — TOP5 偏差SKU</div>
+            <table class="compact-table"><thead><tr><th>SKU</th><th>商品名称</th><th>月份</th><th>预测</th><th>实际</th><th>偏差</th><th>达成率</th></tr></thead><tbody>`;
+        top5.forEach(sk => {
+          const skPct = sk.pred_qty > 0 ? (sk.actual_qty / sk.pred_qty * 100) : 0;
+          const skColor = skPct < 80 ? '#ef4444' : (skPct > 120 ? '#f59e0b' : '#22c55e');
+          const skDevStr = sk.deviation >= 0 ? `+${sk.deviation}` : `${sk.deviation}`;
+          shtml += `<tr><td style="font-family:monospace;font-size:10px;color:var(--gray-400)">${sk.sku}</td><td style="text-align:left">${sk.name||''}</td><td>${sk.month||''}</td>
+            <td class="num">${sk.pred_qty||0}</td><td class="num">${sk.actual_qty||0}</td>
+            <td class="num" style="color:${sk.deviation<0?'#ef4444':'#22c55e'};font-weight:700">${skDevStr}</td>
+            <td class="num" style="color:${skColor};font-weight:700">${skPct.toFixed(0)}%</td></tr>`;
+        });
+        shtml += `</tbody></table></div></td></tr>`;
+      }
+    });
+    shtml += `</tbody></table>`;
+    $('verifySeriesTable').innerHTML = shtml;
+  } else {
+    $('verifySeriesTable').innerHTML = '<div class="empty-state"><p>无系列数据</p></div>';
+  }
+
+  if (highDev.length > 0) {
+    let hhtml = `<table><thead><tr><th>#</th><th>月份</th><th>系列</th><th>颜色</th><th>SKU</th><th>商品名称</th><th>预测</th><th>实际</th><th>偏差</th><th>实际/预测</th></tr></thead><tbody>`;
+    highDev.forEach((d,i) => {
+      const pct = (d.ratio * 100).toFixed(0);
+      hhtml += `<tr class="${i%2===0?'':'alt'}"><td>${i+1}</td><td>${d.month||''}</td><td>${d.series||''}</td><td>${d.color||''}</td>
+        <td style="font-family:monospace;font-size:11px;color:var(--gray-400)">${d.sku||''}</td><td>${d.name||''}</td>
+        <td class="num">${d.pred_qty||0}</td><td class="num">${d.actual_qty||0}</td>
+        <td class="num" style="color:${d.deviation<0?'#ef4444':'#22c55e'};font-weight:700">${d.deviation>=0?'+':''}${d.deviation||0}</td>
+        <td class="num" style="color:${pct<80?'#ef4444':pct>120?'#f59e0b':'#22c55e'};font-weight:700">${pct}%</td></tr>`;
+    });
+    hhtml += `</tbody></table>`;
+    $('verifyHighDevTable').innerHTML = hhtml;
+  } else {
+    $('verifyHighDevTable').innerHTML = '<div class="empty-state"><p>无偏差异常的SKU</p></div>';
+  }
+  
+  // 全部明细
+  let html = `<table><thead><tr><th>月份</th><th>系列</th><th>颜色</th><th>SKU</th><th>商品名称</th><th>预测件数</th><th>实际件数</th><th>偏差</th></tr></thead><tbody>`;
+  skuLevel.slice(0, 200).forEach(d => {
+    html += `<tr><td>${d.month||''}</td><td>${d.series||''}</td><td>${d.color||''}</td>
+      <td style="font-family:monospace;font-size:11px;color:var(--gray-400)">${d.sku||''}</td><td>${d.name||''}</td>
+      <td class="num">${d.pred_qty||0}</td><td class="num">${d.actual_qty||0}</td>
+      <td class="num ${d.deviation>=0?'up':'down'}">${d.deviation>=0?'+':''}${d.deviation||0}</td>
+      <td class="num ${d.accuracy>=80?'':(d.accuracy>=50?'':'down')}">${d.accuracy.toFixed(1)}%</td></tr>`;
+  });
+  if (skuLevel.length > 200) html += `<tr><td colspan="9" style="text-align:center;color:var(--gray-400)">... 还有${skuLevel.length-200}条</td></tr>`;
+  html += `</tbody></table>`;
+  $('verifyTableWrap').innerHTML = html;
+}
+
+// 验真月份筛选
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    const el = $('verifyMonth');
+    if (el) el.addEventListener('change', () => { if (document.querySelector('#panel-verify.active')) renderVerify(getActiveFilters()); });
+  }, 500);
+});
+
+// ===== 日期筛选辅助 =====
+function filterDataByDate(f) {
+  if (!f.start && !f.end) return null;
+  if (!DATA.daily_actual) return null;
+  const start = f.start ? new Date(f.start) : null;
+  const end = f.end ? new Date(f.end) : null;
+  const filtered = DATA.daily_actual.filter(d => {
+    const dt = new Date(d.date);
+    if (start && dt < start) return false;
+    if (end && dt > end) return false;
+    return true;
+  });
+  return {
+    totalQty: filtered.reduce((a, d) => a + d.qty, 0),
+    totalRev: filtered.reduce((a, d) => a + d.rev, 0),
+    days: filtered.length,
+    data: filtered
+  };
+}
+
+// ===== 启动 =====
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+
+<div class="main-content">
+<!-- 导航 -->
+<nav class="nav" id="nav"></nav>
+
+<div class="container">
+
+<!-- 筛选栏 -->
+<div class="filters" id="filterBar"></div>
+<div class="channel-tags" id="channelTags"></div>
+
+<!-- ===== 行李箱总览 ===== -->
+<div class="tab-content active" id="tab-luggage">
+  <div class="kpi-grid" id="lugKpi"></div>
+  <div class="chart-row">
+    <div class="chart-box full"><h3>销售趋势 <small id="lugTrendLabel"></small></h3><canvas id="lugTrend"></canvas></div>
+  </div>
+  <div class="chart-row">
+    <div class="chart-box"><h3>系列销售TOP <small id="lugSeriesLabel"></small></h3><canvas id="lugSeriesChart"></canvas></div>
+    <div class="chart-box"><h3>各渠道销售额占比</h3><canvas id="lugPieChart"></canvas></div>
+  </div>
+  <!-- 可折叠系列明细 -->
+  <div class="collapse-wrap" id="lugDetailCollapse">
+    <div class="collapse-header" onclick="toggleCollapse('lugDetailBody')">
+      <h3>📋 系列销售明细 <small id="lugDetailCount"></small></h3>
+      <span class="arrow" id="lugDetailArrow">▼</span>
+    </div>
+    <div class="collapse-body" id="lugDetailBody">
+      <div class="table-wrap"><table><thead><tr id="lugDetailHead"><th>系列</th><th>销售额</th><th>销量</th><th>占比</th></tr></thead><tbody id="lugDetailBodyInner"></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 包袋总览 ===== -->
+<div class="tab-content" id="tab-bag">
+  <div class="kpi-grid" id="bagKpi"></div>
+  <div class="chart-row">
+    <div class="chart-box full"><h3>销售趋势 <small id="bagTrendLabel"></small></h3><canvas id="bagTrend"></canvas></div>
+  </div>
+  <div class="chart-row">
+    <div class="chart-box"><h3>系列销售TOP <small id="bagSeriesLabel"></small></h3><canvas id="bagSeriesChart"></canvas></div>
+    <div class="chart-box"><h3>各渠道销售额占比</h3><canvas id="bagPieChart"></canvas></div>
+  </div>
+  <!-- 可折叠系列明细 -->
+  <div class="collapse-wrap" id="bagDetailCollapse">
+    <div class="collapse-header" onclick="toggleCollapse('bagDetailBody')">
+      <h3>📋 系列销售明细 <small id="bagDetailCount"></small></h3>
+      <span class="arrow" id="bagDetailBodyArrow">▼</span>
+    </div>
+    <div class="collapse-body" id="bagDetailBody">
+      <div class="table-wrap"><table><thead><tr id="bagDetailHead"><th>系列</th><th>销售额</th><th>销量</th><th>占比</th></tr></thead><tbody id="bagDetailBodyInner"></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 系列看板 ===== -->
+<div class="tab-content" id="tab-series-detail">
+  <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center;background:#fff;padding:8px 16px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+    <label style="font-size:12px;color:#6b7280;font-weight:500">品类</label>
+    <select id="seriesCat" onchange="renderSeriesTab()" style="border:1px solid #d1d5db;border-radius:6px;padding:5px 10px;font-size:13px;background:#fff">
+      <option value="all">全部</option><option value="luggage">行李箱</option><option value="bag">包袋</option>
+    </select>
+  </div>
+  <div class="kpi-grid" id="seriesKpi"></div>
+  <div id="seriesCardsContainer" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px"></div>
+</div>
+
+<!-- ===== 人群看板 ===== -->
+<div class="tab-content" id="tab-audience">
+  <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center;background:#fff;padding:8px 16px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+    <label style="font-size:12px;color:#6b7280;font-weight:500">品类</label>
+    <select id="audCat" onchange="setAudCategory(this.value)" style="border:1px solid #d1d5db;border-radius:6px;padding:5px 10px;font-size:13px;background:#fff">
+      <option value="all">全部</option><option value="luggage">行李箱</option><option value="bag">包袋</option>
+    </select>
+    <button onclick="renderAudience()" style="padding:5px 16px;background:#2563eb;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:12px">刷新</button>
+  </div>
+  <div class="kpi-grid" id="audKpi"></div>
+  <div class="chart-row">
+    <div class="chart-box full"><h3>各人群销售趋势 <small id="audTrendLabel"></small></h3><canvas id="audTrend"></canvas></div>
+  </div>
+  <div class="chart-row">
+    <div class="chart-box"><h3>人群销售额占比</h3><canvas id="audPieChart"></canvas></div>
+    <div class="chart-box"><h3>人群×系列 TOP</h3><canvas id="audSeriesChart"></canvas></div>
+  </div>
+</div>
+
+<!-- ===== 尺寸看板 ===== -->
+<div class="tab-content" id="tab-size">
+  <div style="margin-bottom:12px;display:flex;gap:10px;align-items:center;background:#fff;padding:8px 16px;border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)">
+    <label style="font-size:12px;color:#6b7280;font-weight:500">品类</label>
+    <select id="sizeCat" onchange="renderSize()" style="border:1px solid #d1d5db;border-radius:6px;padding:5px 10px;font-size:13px;background:#fff">
+      <option value="all">全部</option><option value="luggage">行李箱</option><option value="bag">包袋</option>
+    </select>
+  </div>
+  <div class="kpi-grid" id="sizeKpi"></div>
+  <div class="chart-row">
+    <div class="chart-box"><h3>尺寸销售额排行 <small>（带同比箭头）</small></h3><canvas id="sizeRankChart"></canvas></div>

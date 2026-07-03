@@ -1,0 +1,8 @@
+*.xlsx
+*.xls
+*.pbix
+__pycache__/
+*.pyc
+.workbuddy/
+web/_*.py
+web/serve.bat
