@@ -136,6 +136,14 @@ def compute_sku_info(sku_detail_df, daily_df, pred_janmay=None):
 
         total_pred = sum(monthly_pred.values())
 
+        # 2025同期数据
+        ly_qty = {}
+        ly_amt = {}
+        for mk in ['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06',
+                    '2025-07','2025-08','2025-09','2025-10','2025-11','2025-12']:
+            ly_qty[mk] = actual_qty_by_sku.get(sku, {}).get(mk, 0)
+            ly_amt[mk] = round(actual_amt_by_sku.get(sku, {}).get(mk, 0), 2)
+
         sku_list.append({
             'sku': sku, 'name': pname, 'series': series,
             'color': color, 'size': size, 'category': category,
@@ -144,6 +152,8 @@ def compute_sku_info(sku_detail_df, daily_df, pred_janmay=None):
             'actual_by_month': monthly_actual,
             'actual_amt_by_month': monthly_actual_amt,
             'amt_by_month': monthly_amt,
+            'last_year_qty': ly_qty,
+            'last_year_amt': ly_amt,
             'total_pred': total_pred,
             'total_actual': sum(monthly_actual.values()),
             'total_amt': round(sum(monthly_amt.values()), 2),

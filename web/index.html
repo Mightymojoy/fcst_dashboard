@@ -186,6 +186,26 @@ tr.summary td{font-weight:700;background:#faf6eb;border-top:2px solid var(--gold
       <select class="color-select" id="skuColorFilter"><option value="">全部颜色</option></select>
       <button onclick="if(document.querySelector('#panel-sku.active'))renderSku(getActiveFilters())" style="border:1px solid #c9a962;color:#c9a962;background:#fff;padding:4px 12px;border-radius:5px;cursor:pointer;font-size:12px">手动刷新</button>
     </div>
+    <div class="sku-mode-bar" style="display:flex;align-items:center;gap:10px;padding:8px 0;flex-wrap:wrap">
+      <div class="mode-tog" id="skuModeTog" style="display:flex;border:1px solid #e5e7eb;border-radius:6px;overflow:hidden;font-size:12px">
+        <button class="active" data-sku-mode="amt" style="padding:4px 14px;border:none;background:#c9a962;color:#fff;cursor:pointer;font-weight:600">销售额(万)</button>
+        <button data-sku-mode="qty" style="padding:4px 14px;border:none;background:#fff;color:#737373;cursor:pointer">销量(件)</button>
+      </div>
+      <label style="font-size:12px;color:#737373;display:flex;align-items:center;gap:4px;cursor:pointer">
+        <input type="checkbox" id="skuShowLY" style="accent-color:#c9a962"> 显示去年同期
+      </label>
+      <span style="position:relative">
+        <span onclick="const p=this.nextElementSibling;p.style.display=p.style.display==='none'?'block':'none'" style="font-size:11px;color:#c9a962;cursor:pointer;padding:3px 8px;border:1px solid #e5e7eb;border-radius:4px;white-space:nowrap">列设置 ▾</span>
+        <div id="skuColPanel" style="display:none;position:absolute;top:26px;right:0;background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:8px 12px;z-index:200;box-shadow:0 4px 12px rgba(0,0,0,.08);min-width:140px">
+          <label style="font-size:11px;color:#737373;display:flex;align-items:center;gap:4px;cursor:pointer;padding:2px 0"><input type="checkbox" class="skuColCb" data-col="code" style="accent-color:#c9a962" checked> SKU编码</label>
+          <label style="font-size:11px;color:#737373;display:flex;align-items:center;gap:4px;cursor:pointer;padding:2px 0"><input type="checkbox" class="skuColCb" data-col="series" style="accent-color:#c9a962" checked> 系列</label>
+          <label style="font-size:11px;color:#737373;display:flex;align-items:center;gap:4px;cursor:pointer;padding:2px 0"><input type="checkbox" class="skuColCb" data-col="color" style="accent-color:#c9a962" checked> 颜色</label>
+          <label style="font-size:11px;color:#737373;display:flex;align-items:center;gap:4px;cursor:pointer;padding:2px 0"><input type="checkbox" class="skuColCb" data-col="size" style="accent-color:#c9a962" checked> 尺寸</label>
+          <label style="font-size:11px;color:#737373;display:flex;align-items:center;gap:4px;cursor:pointer;padding:2px 0"><input type="checkbox" class="skuColCb" data-col="cat" style="accent-color:#c9a962" checked> 品类</label>
+          <label style="font-size:11px;color:#737373;display:flex;align-items:center;gap:4px;cursor:pointer;padding:2px 0"><input type="checkbox" class="skuColCb" data-col="price" style="accent-color:#c9a962" checked> 吊牌价</label>
+        </div>
+      </span>
+    </div>
     <div class="kpi-grid" id="skuKpi"></div>
     <div class="table-wrap" id="skuTableWrap"></div>
   </div>
@@ -284,6 +304,11 @@ let seriesYoyMomMode = 'all'; // 系列同环比切换
 function $(id) { return document.getElementById(id); }
 function fmtNum(n) { return Number(n).toLocaleString('zh-CN'); }
 function fmtWan(v) { return v >= 10000 ? (v/10000).toFixed(1) + '亿' : v.toFixed(1) + '万'; }
+function fmtUnit(v, mode) {
+  if (!v || v <= 0) return '-';
+  if (mode === 'amt') return (v / 10000).toFixed(1) + '万';
+  return v.toLocaleString('zh-CN');
+}
 
 // ===== 初始化 =====
 async function init() {
@@ -322,7 +347,45 @@ async function init() {
   // 筛选变更（子页面独立筛选）
   ['skuSearch','skuSeriesFilter','skuColorFilter'].forEach(id => {
     const el = $(id);
-    if (el) el.addEventListener('change', () => { if ($('#panel-sku').classList.contains('active')) renderSku(getActiveFilters()); });
+    if (el) el.addEventListener('change', () => { if ($('panel-sku').classList.contains('active')) renderSku(getActiveFilters()); });
+  });
+  
+  // SKU明细模式切换（销售额/销量）
+  // SKU模式：全局状态
+  window._skuMode = 'amt';
+  window._skuShowLY = false;
+  window._skuCols = {code:true, series:true, color:true, size:true, cat:true, price:true};
+  const skuModeTog = $('skuModeTog');
+  if (skuModeTog) {
+    skuModeTog.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-sku-mode]');
+      if (!btn) return;
+      skuModeTog.querySelectorAll('button').forEach(b => {
+        b.style.background = '#fff'; b.style.color = '#737373'; b.classList.remove('active');
+      });
+      btn.style.background = '#c9a962'; btn.style.color = '#fff'; btn.classList.add('active');
+      window._skuMode = btn.dataset.skuMode;
+      const f = getActiveFilters();
+      if ($('panel-sku').classList.contains('active')) renderSku(f);
+    });
+  }
+  // SKU显示去年同期
+  const skuShowLY = $('skuShowLY');
+  if (skuShowLY) {
+    skuShowLY.addEventListener('change', () => {
+      window._skuShowLY = skuShowLY.checked;
+      const f = getActiveFilters();
+      if ($('panel-sku').classList.contains('active')) renderSku(f);
+    });
+  }
+  // SKU编码显示/隐藏
+  // SKU列设置面板
+  document.querySelectorAll('.skuColCb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      window._skuCols[cb.dataset.col] = cb.checked;
+      const f = getActiveFilters();
+      if ($('panel-sku').classList.contains('active')) renderSku(f);
+    });
   });
   
   // 同环比切换
@@ -437,7 +500,10 @@ function getActiveFilters() {
   const start = $('startDate')?.value || '';
   const end = $('endDate')?.value || '';
   const showSku = $('skuSwitch')?.classList.contains('on') || false;
-  return { series, color, category, start, end, showSku };
+  const skuMode = typeof window._skuMode !== 'undefined' ? window._skuMode : 'amt';
+  const skuShowLY = typeof window._skuShowLY !== 'undefined' ? window._skuShowLY : false;
+  const skuCols = typeof window._skuCols !== 'undefined' ? {...window._skuCols} : {code:true,series:true,color:true,size:true,cat:true,price:true};
+  return { series, color, category, start, end, showSku, skuMode, skuShowLY, skuCols };
 }
 
 function applyDateFilter() {
@@ -985,10 +1051,13 @@ function renderSeriesTable(filtered, fm, f) {
 // ============================================================
 function renderSku(f) {
   if (!f.showSku) {
-    $('skuContent').innerHTML = '<div style="text-align:center;padding:60px 20px;color:#9ca3af;"><p>SKU明细已隐藏，点击筛选栏的「SKU明细」开关可显示</p></div>';
+    $('skuKpi').innerHTML = ''; $('skuTableWrap').innerHTML = '<div style="text-align:center;padding:60px 20px;color:#9ca3af;"><p>SKU明细已隐藏</p></div>';
     return;
   }
   
+  const mode = f.skuMode || 'amt';
+  const showLY = f.skuShowLY || false;
+  const cols = f.skuCols || {code:true,series:true,color:true,size:true,cat:true,price:true};
   const fm = getFilteredMonthIndices(f);
   const months = filterArray(DATA.summary?.months || [], fm);
   const keys = filterArray(DATA.summary?.months_key || [], fm);
@@ -1006,63 +1075,108 @@ function renderSku(f) {
   if (cFilter) skus = skus.filter(sk => sk.color === cFilter);
   if (searchVal) skus = skus.filter(sk => sk.sku.toLowerCase().includes(searchVal) || sk.name.toLowerCase().includes(searchVal));
   
-  // 按日期范围计算各SKU的合计
+  // 按模式取值
+  const getPred = (sk, k) => mode === 'amt' ? (sk.amt_by_month?.[k] || 0) : (sk.pred_by_month?.[k] || 0);
+  const getAct = (sk, k) => mode === 'amt' ? (sk.actual_amt_by_month?.[k] || 0) : (sk.actual_by_month?.[k] || 0);
+  const getLY = (sk, k) => {
+    const m = k.replace('2026-', '2025-');
+    return mode === 'amt' ? (sk.last_year_amt?.[m] || 0) : (sk.last_year_qty?.[m] || 0);
+  };
+  
   const skuRows = skus.map(sk => {
-    const predMonths = sk.pred_by_month || {};
-    let totalPred = 0;
-    keys.forEach(k => { totalPred += predMonths[k] || 0; });
-    const actualMonths = sk.actual_by_month || {};
-    let totalActual = 0;
-    keys.forEach(k => { totalActual += actualMonths[k] || 0; });
-    return { ...sk, totalPred, totalActual };
+    let tPred = 0, tAct = 0, tLY = 0;
+    keys.forEach(k => { tPred += getPred(sk, k); tAct += getAct(sk, k); tLY += getLY(sk, k); });
+    return { ...sk, tPred, tAct, tLY };
   });
   
   // KPI
+  const unit = mode === 'amt' ? '万' : '件';
   $('skuKpi').innerHTML = `
     <div class="kpi-card"><div class="label">筛选SKU</div><div class="value">${skuRows.length}</div></div>
-    <div class="kpi-card"><div class="label">预测合计</div><div class="value">${fmtNum(skuRows.reduce((a, sk) => a + sk.totalPred, 0))}</div></div>
-    <div class="kpi-card"><div class="label">实际合计</div><div class="value">${fmtNum(skuRows.reduce((a, sk) => a + sk.totalActual, 0))}</div></div>
-  `;
+    <div class="kpi-card"><div class="label">预测${unit}合计</div><div class="value">${fmtUnit(skuRows.reduce((a, sk) => a + sk.tPred, 0), mode)}</div></div>
+    <div class="kpi-card"><div class="label">实际${unit}合计</div><div class="value">${fmtUnit(skuRows.reduce((a, sk) => a + sk.tAct, 0), mode)}</div></div>`;
+  
+  // 预计算各月纵向占比分母 + 去年同期合计
+  const monthTotals = {};
+  const lyTotals = {};
+  keys.forEach(k => {
+    const m = parseInt(k.split('-')[1]);
+    const isPast = (new Date().getFullYear() === 2026 && m < new Date().getMonth() + 1);
+    monthTotals[k] = {
+      pred: skuRows.reduce((s, sk2) => s + getPred(sk2, k), 0),
+      actual: isPast ? skuRows.reduce((s, sk2) => s + getAct(sk2, k), 0) : 0
+    };
+    lyTotals[k] = skuRows.reduce((s, sk2) => s + getLY(sk2, k), 0);
+  });
+  
+  const headCells = [];
+  if (cols.code) headCells.push('<th>SKU编码</th>');
+  headCells.push('<th>商品名称</th>');
+  if (cols.series) headCells.push('<th>系列</th>');
+  if (cols.color) headCells.push('<th>颜色</th>');
+  if (cols.size) headCells.push('<th>尺寸</th>');
+  if (cols.cat) headCells.push('<th>品类</th>');
+  if (cols.price) headCells.push('<th>吊牌价</th>');
+  const midCols = headCells.length + 2 + (showLY ? 1 : 0);
+  const headExtra = showLY ? '<th class="num">去年'+unit+'合计</th>' : '';
   
   // 表格
-  let html = `<table><thead><tr>
-    <th>SKU编码</th><th>商品名称</th><th>系列</th><th>颜色</th><th>尺寸</th><th>品类</th><th>吊牌价</th>
-    <th>预测合计</th><th>实际合计</th>`;
-  months.forEach(m => { html += `<th>${m}</th>`; });
+  let html = `<div style="overflow-x:auto"><table><thead><tr>
+    ${headCells.join('')}
+    <th class="num">预测${unit}</th><th class="num">实际${unit}</th>${headExtra}`;
+  months.forEach(m => { html += `<th class="num">${m}</th>`; });
   html += `</tr></thead><tbody>`;
   
+  const nowM = new Date().getMonth() + 1;
+  const nowY = new Date().getFullYear();
+  
   skuRows.forEach(sk => {
-    html += `<tr>
-      <td style="font-family:monospace;font-size:11px;color:var(--gray-400)">${sk.sku}</td>
-      <td>${sk.name}</td>
-      <td class="gold">${sk.series}</td>
-      <td>${sk.color}</td>
-      <td>${sk.size}</td>
-      <td>${sk.category}</td>
-      <td class="num">${sk.price > 0 ? '¥' + fmtNum(sk.price) : '-'}</td>
-      <td class="num gold">${fmtNum(sk.totalPred)}</td>
-      <td class="num">${fmtNum(sk.totalActual)}</td>`;
-    // 分月占比子行
-    const nowMonth = new Date().getMonth() + 1; // 当前月份=7
-    const currentYear = new Date().getFullYear();
-    let pctHtml = ''; // 占比单元格
+    const tdCells = [];
+    if (cols.code) tdCells.push(`<td style="font-family:monospace;font-size:11px;color:var(--gray-400)">${sk.sku}</td>`);
+    tdCells.push(`<td>${sk.name}</td>`);
+    if (cols.series) tdCells.push(`<td class="gold">${sk.series}</td>`);
+    if (cols.color) tdCells.push(`<td>${sk.color}</td>`);
+    if (cols.size) tdCells.push(`<td>${sk.size}</td>`);
+    if (cols.cat) tdCells.push(`<td>${sk.category}</td>`);
+    if (cols.price) tdCells.push(`<td class="num">${sk.price > 0 ? '¥' + fmtNum(sk.price) : '-'}</td>`);
+    html += `<tr>${tdCells.join('')}
+      <td class="num gold">${fmtUnit(sk.tPred, mode)}</td>
+      <td class="num">${fmtUnit(sk.tAct, mode)}</td>`;
+    if (showLY) html += `<td class="num" style="color:#9ca3af">${fmtUnit(sk.tLY, mode)}</td>`;
+    let pctHtml = '', lyHtml = '';
     keys.forEach(k => {
-      const pv = sk.pred_by_month?.[k] || 0;
-      const av = sk.actual_by_month?.[k] || 0;
+      const pv = getPred(sk, k);
+      const av = getAct(sk, k);
       const m = parseInt(k.split('-')[1]);
-      const isPast = (currentYear === 2026 && m < nowMonth) || currentYear < 2026;
-      const divisor = isPast ? sk.totalActual : sk.totalPred;
+      const isPast = (nowY === 2026 && m < nowM) || nowY < 2026;
+      const divisor = isPast ? monthTotals[k].actual : monthTotals[k].pred;
       const num = isPast ? av : pv;
+      const ly = getLY(sk, k);
+      const lypct = lyTotals[k] > 0 ? (ly / lyTotals[k] * 100) : 0;
       const pct = divisor > 0 ? (num / divisor * 100) : 0;
-      html += `<td class="num">${pv > 0 ? fmtNum(pv) : '-'}</td>`;
+      // 涨跌箭头
+      const chgArrow = (showLY && ly > 0 && num > 0) ? (num > ly ? '▲' : (num < ly ? '▼' : '―')) : '';
+      const chgColor = (num > ly) ? '#22c55e' : ((num < ly) ? '#ef4444' : '#9ca3af');
+      const chgHtml = chgArrow ? `<span style="color:${chgColor};font-size:9px;margin-right:1px">${chgArrow}</span>` : '';
+      html += `<td class="num">${chgHtml}${num > 0 ? fmtUnit(num, mode) : '-'}</td>`;
       pctHtml += `<td style="font-size:9px;color:${pct>0?'#c9a962':'#d4d4d4'};text-align:center">${pct > 0 ? pct.toFixed(1)+'%' : '-'}</td>`;
+      if (showLY) { lyHtml += `<td style="font-size:9px;color:#9ca3af;text-align:center">${ly > 0 ? fmtUnit(ly, mode) : '-'}` + (lyTotals[k] > 0 ? `<br><span style="color:${lypct>0?'#c9a962':'#d4d4d4'};font-size:8px">${lypct > 0 ? lypct.toFixed(1)+'%' : '-'}</span>` : '') + `</td>`; }
     });
-    html += `</tr><tr style="background:#fafafa;border-bottom:1px solid #e8e8e8">
-      <td colspan="9" style="font-size:9px;color:#9ca3af;padding:2px 6px;text-align:right">各月占比 →</td>
+    html += `</tr>`;
+    // 占比行
+    html += `<tr style="background:#fafafa;border-bottom:1px solid #e8e8e8">
+      <td colspan="${midCols}" style="font-size:9px;color:#9ca3af;padding:2px 6px;text-align:right">当月占比 →</td>
       ${pctHtml}
     </tr>`;
+    // 去年同期行
+    if (showLY) {
+      html += `<tr style="background:#f5f5f0;border-bottom:1px solid #e8e8e8">
+        <td colspan="${midCols}" style="font-size:9px;color:#9ca3af;padding:2px 6px;text-align:right">去年同期 →</td>
+        ${lyHtml}
+      </tr>`;
+    }
   });
-  html += `</tbody></table>`;
+  html += `</tbody></table></div>`;
   $('skuTableWrap').innerHTML = html;
 }
 
